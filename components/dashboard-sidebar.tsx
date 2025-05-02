@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useMobile } from "@/hooks/use-mobile";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 interface DashboardSidebarProps {
   user: any;
@@ -31,15 +32,35 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
   const isMobile = useMobile();
+  const isLargeScreen = useMediaQuery("(min-width: 768px)");
   const sidebarRef = useRef<HTMLDivElement>(null);
   const [isHovering, setIsHovering] = useState(false);
 
   useEffect(() => {
-    // Initialize sidebar state
-    if (!isMobile) {
-      const savedState = localStorage.getItem("sidebarCollapsed");
-      setIsCollapsed(savedState === "true");
+    const savedState = localStorage.getItem("sidebarCollapsed");
+    const initialState =
+      savedState !== null ? savedState === "true" : !isLargeScreen;
+    setIsCollapsed(initialState);
+  }, [isLargeScreen]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (!isLargeScreen) {
+        setIsCollapsed(true);
+      }
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("resize", handleResize);
+
+      return () => {
+        window.removeEventListener("resize", handleResize);
+      };
     }
+  }, [isLargeScreen]);
+
+  useEffect(() => {
+    localStorage.setItem("sidebarCollapsed", String(isCollapsed));
   }, [isMobile]);
 
   useEffect(() => {
@@ -77,21 +98,29 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
     }
   };
 
-  const isActive = (path: string) => {
-    return pathname === path;
-  };
-
-  const handleMouseEnter = () => {
+  const handleMouseEnter = useCallback(() => {
     if (!isMobile && isCollapsed) {
       setIsHovering(true);
     }
-  };
+  }, [isMobile, isCollapsed]);
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
     if (!isMobile && isCollapsed) {
       setIsHovering(false);
     }
-  };
+  }, [isMobile, isCollapsed]);
+
+  const isActive = useCallback(
+    (path: string) => {
+      return pathname === path;
+    },
+    [pathname]
+  );
+
+  const handleSidebarClick = useCallback(() => {
+    isMobile && setIsSidebarOpen(false);
+  }, [isMobile]);
+
 
   const sidebarWidth = isCollapsed && !isHovering ? "w-16" : "w-64";
   const sidebarTransition = "transition-all duration-300 ease-in-out";
@@ -100,7 +129,7 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
     <>
       {/* Mobile Toggle Button */}
       {isMobile && (
-        <button
+        <Button
           onClick={toggleSidebar}
           className="fixed bottom-4 right-4 z-50 p-3 rounded-full bg-primary text-primary-foreground shadow-lg md:hidden"
         >
@@ -111,8 +140,8 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
       {/* Sidebar */}
       <aside
         ref={sidebarRef}
-        className={cn(
-          "fixed inset-y-0 left-0 z-50 bg-background border-r",
+        className={
+          cn("fixed inset-y-0 left-0 z-50 bg-background",
           sidebarWidth,
           sidebarTransition,
           isMobile
@@ -120,12 +149,14 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
               ? "translate-x-0"
               : "-translate-x-full"
             : "translate-x-0"
-        )}
+            ,"border-r-[1px] border-r-[#d0d0d0] border-l-0")}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
         <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between p-4 border-b">
+          <div
+            className={cn("flex items-center justify-between p-4", "border-b-[1px] border-b-[#d0d0d0]")}
+          >
             <Link
               href="/dashboard"
               className="flex items-center space-x-2 overflow-hidden"
@@ -133,7 +164,7 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
               <Shield className="h-6 w-6 text-primary flex-shrink-0" />
               <span
                 className={cn(
-                  "font-anta text-lg whitespace-nowrap",
+                  "font-anta text-lg whitespace-nowrap flex-1",
                   isCollapsed && !isHovering ? "hidden" : "block"
                 )}
               >
@@ -141,12 +172,12 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
               </span>
             </Link>
             <button
-              onClick={toggleSidebar}
-              className={cn(
-                "p-2 rounded-md hover:bg-accent",
-                isCollapsed && !isHovering && !isMobile ? "hidden" : "block"
-              )}
-            >
+                onClick={toggleSidebar}
+                className={cn(
+                  "p-2 rounded-md hover:bg-accent",
+                  isCollapsed && !isHovering && !isMobile ? "hidden" : "block"
+                )}
+              >
               {isMobile ? (
                 <X className="h-5 w-5" />
               ) : isCollapsed ? (
@@ -158,7 +189,9 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
           </div>
 
           <div
-            className={cn(
+
+            className={
+              cn(
               "flex items-center p-4 border-b",
               isCollapsed && !isHovering ? "justify-center" : ""
             )}
@@ -191,8 +224,9 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
             </div>
           </div>
 
-          <nav className="flex-1 overflow-y-auto p-2 space-y-1">
+          <nav className="flex-1 overflow-y-auto p-2 space-y-1 border-b-[1px] border-b-[#d0d0d0]">
             <Link
+
               href="/dashboard"
               className={cn(
                 "flex items-center space-x-2 px-3 py-2 rounded-md transition-colors",
@@ -201,7 +235,7 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
                   : "hover:bg-accent",
                 isCollapsed && !isHovering ? "justify-center" : ""
               )}
-              onClick={closeSidebar}
+              onClick={handleSidebarClick}
             >
               <LayoutDashboard className="h-5 w-5 flex-shrink-0" />
               <span
@@ -220,7 +254,7 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
                   : "hover:bg-accent",
                 isCollapsed && !isHovering ? "justify-center" : ""
               )}
-              onClick={closeSidebar}
+              onClick={handleSidebarClick}
             >
               <Smartphone className="h-5 w-5 flex-shrink-0" />
               <span
@@ -239,7 +273,7 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
                   : "hover:bg-accent",
                 isCollapsed && !isHovering ? "justify-center" : ""
               )}
-              onClick={closeSidebar}
+              onClick={handleSidebarClick}
             >
               <Search className="h-5 w-5 flex-shrink-0" />
               <span
@@ -258,7 +292,7 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
                   : "hover:bg-accent",
                 isCollapsed && !isHovering ? "justify-center" : ""
               )}
-              onClick={closeSidebar}
+              onClick={handleSidebarClick}
             >
               <Receipt className="h-5 w-5 flex-shrink-0" />
               <span
@@ -277,7 +311,7 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
                   : "hover:bg-accent",
                 isCollapsed && !isHovering ? "justify-center" : ""
               )}
-              onClick={closeSidebar}
+              onClick={handleSidebarClick}
             >
               <CreditCard className="h-5 w-5 flex-shrink-0" />
               <span
@@ -296,7 +330,7 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
                   : "hover:bg-accent",
                 isCollapsed && !isHovering ? "justify-center" : ""
               )}
-              onClick={closeSidebar}
+              onClick={handleSidebarClick}
             >
               <Settings className="h-5 w-5 flex-shrink-0" />
               <span
@@ -307,11 +341,15 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
             </Link>
           </nav>
 
-          <div className="p-4 border-t">
+          <div
+            className={cn(
+              "p-4 mt-auto", "border-t-[1px] border-t-[#d0d0d0]"
+            )}
+          >
             <Button
               variant="outline"
               className={cn(
-                "w-full flex items-center justify-center",
+                "w-full flex items-center justify-center ",
                 isCollapsed && !isHovering ? "px-2" : ""
               )}
               onClick={onLogout}
@@ -328,6 +366,7 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
             </Button>
           </div>
         </div>
+        
       </aside>
     </>
   );

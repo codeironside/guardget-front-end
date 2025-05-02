@@ -1,38 +1,35 @@
 "use client";
 
-import type React from "react";
-
-import { useState, useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
-import Link from "next/link";
+import React, { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
+  AlertTriangle,
   Home,
-  Smartphone,
-  Receipt,
+  LogOut,
   Settings,
   Search,
-  LogOut,
-  AlertTriangle,
+  Receipt,
   CreditCard,
+  Users,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import DashboardSidebar from "./dashboard-sidebar";
+import { Loader2 } from "lucide-react";
+import { Sidebar } from "./ui/sidebar";
+
+import { useAuth } from "./context/auth-content";
+import Link from "next/link";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuButton,
   SidebarMenuItem,
-  SidebarProvider,
-  SidebarTrigger,
-  SidebarRail,
-} from "@/components/ui/sidebar";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "./context/auth-content";
-import { ModeToggle } from "./mode-toggle";
+} from "./ui/sidebar";
 
 type DashboardLayoutProps = {
   children: React.ReactNode;
@@ -43,7 +40,7 @@ export default function UserDashboardLayout({
 }: DashboardLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, session } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
@@ -77,11 +74,8 @@ export default function UserDashboardLayout({
   }, [sidebarOpen]);
 
   const getInitials = () => {
-    console.log(`user details ${JSON.stringify(user)}`)
     if (!user) return "GG";
-    return `${user.firstName.charAt(
-      0
-    )}${user.surName.charAt(0)}`;
+    return `${user.firstName.charAt(0)}${user.surName.charAt(0)}`;
   };
 
   if (loading) {
@@ -127,165 +121,51 @@ export default function UserDashboardLayout({
   }
 
   return (
-    <SidebarProvider defaultOpen={sidebarOpen}>
-      <div className="flex h-screen overflow-hidden bg-background">
-        <Sidebar variant="floating" collapsible="icon">
-          <SidebarHeader className="flex items-center justify-center py-4">
-            <div className="flex items-center gap-2 px-2">
-              <Avatar>
-                <AvatarImage src={user.imageurl || ""} />
-                <AvatarFallback>{getInitials()}</AvatarFallback>
+    <div className="flex min-h-screen bg-background">
+      <DashboardSidebar />
+
+      <main className="flex-1 p-4 md:p-6 overflow-y-auto">
+        <div className="space-y-6">
+          {/* Dashboard Header */}
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+            <div className="flex items-center space-x-4">
+              <Avatar className="h-8 w-8">
+                {user?.imageurl ? (
+                  <AvatarImage
+                    src={user.imageurl || "/placeholder.svg"}
+                    alt={user?.firstName || "User"}
+                  />
+                ) : (
+                  <AvatarFallback>
+                    {user?.firstName?.charAt(0) || "U"}
+                    {user?.surName?.charAt(0) || ""}
+                  </AvatarFallback>
+                )}
               </Avatar>
-              <div className="flex flex-col">
-                <span className="font-medium text-sm truncate max-w-[120px]">
-                  {user.firstName} {user.surName}
-                </span>
-                <span className="text-xs text-muted-foreground truncate max-w-[120px]">
-                  {user.email}
-                </span>
+            </div>
+          </div>
+          {!user.subActive &&
+          pathname !== "/dashboard" &&
+          pathname !== "/dashboard/subscription" ? (
+            <div className="space-y-4">
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Subscription Required</AlertTitle>
+              <AlertDescription>
+                You need an active subscription to access this feature. Please
+                subscribe to continue.
+              </AlertDescription>
+            </Alert>
+              <div className="flex justify-center">
+                <Link href="/dashboard/subscription">
+                  <Button>View Subscription Plans</Button>
+                </Link>
               </div>
             </div>
-          </SidebarHeader>
-
-          <SidebarContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === "/dashboard"}
-                  tooltip="Dashboard"
-                >
-                  <Link href="/dashboard">
-                    <Home className="h-5 w-5" />
-                    <span>Dashboard</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname.startsWith("/dashboard/devices")}
-                  tooltip="My Devices"
-                >
-                  <Link href="/dashboard/devices">
-                    <Smartphone className="h-5 w-5" />
-                    <span>My Devices</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === "/dashboard/device-status"}
-                  tooltip="Device Status"
-                >
-                  <Link href="/dashboard/device-status">
-                    <Search className="h-5 w-5" />
-                    <span>Device Status</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === "/dashboard/subscription"}
-                  tooltip="Subscription"
-                >
-                  <Link href="/dashboard/subscription">
-                    <CreditCard className="h-5 w-5" />
-                    <span>Subscription</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === "/dashboard/receipts"}
-                  tooltip="Receipts"
-                >
-                  <Link href="/dashboard/receipts">
-                    <Receipt className="h-5 w-5" />
-                    <span>Receipts</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === "/dashboard/settings"}
-                  tooltip="Settings"
-                >
-                  <Link href="/dashboard/settings">
-                    <Settings className="h-5 w-5" />
-                    <span>Settings</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarContent>
-
-          <SidebarFooter>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Logout" onClick={logout}>
-                  <button>
-                    <LogOut className="h-5 w-5" />
-                    <span>Logout</span>
-                  </button>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarFooter>
-
-          <SidebarRail />
-        </Sidebar>
-
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <header className="border-b bg-background sticky top-0 z-10">
-            <div className="flex h-16 items-center px-4 md:px-6">
-              <SidebarTrigger />
-              <div className="ml-auto flex items-center space-x-4">
-                <ModeToggle />
-                <Avatar>
-                  <AvatarImage src={user.imageurl || ""} />
-                  <AvatarFallback>{getInitials()}</AvatarFallback>
-                </Avatar>
-              </div>
-            </div>
-          </header>
-
-          <main className="flex-1 overflow-auto p-4 md:p-6">
-            {!user.subActive &&
-            pathname !== "/dashboard" &&
-            pathname !== "/dashboard/subscription" ? (
-              <div className="space-y-4">
-                <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Subscription Required</AlertTitle>
-                  <AlertDescription>
-                    You need an active subscription to access this feature.
-                    Please subscribe to continue.
-                  </AlertDescription>
-                </Alert>
-                <div className="flex justify-center">
-                  <Button asChild>
-                    <Link href="/dashboard/subscription">
-                      View Subscription Plans
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              children
-            )}
-          </main>
+          ) : (children)}
         </div>
-      </div>
-    </SidebarProvider>
+      </main>
+    </div>
   );
 }

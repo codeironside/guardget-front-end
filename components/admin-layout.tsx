@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -27,6 +26,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Users, Smartphone, Receipt, LayoutDashboard, LogOut, Settings, User, CreditCard, Bell } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { ModeToggle } from "@/components/mode-toggle"
 
 interface AdminLayoutProps {
@@ -141,16 +141,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </Sidebar>
 
         {/* Main content */}
-        <div className="flex flex-1 flex-col">
-          {/* Top navigation for mobile */}
-          <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 md:h-16 md:px-6">
+        <div className="flex flex-1 flex-col relative">
+          {/* Top navigation for mobile and desktop*/}
+          <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background px-4 md:h-16 md:px-6">
             <SidebarTrigger className="md:hidden" />
             <div className="flex items-center gap-2 font-semibold md:hidden">
-              <Smartphone className="h-5 w-5" />
+              <Smartphone className="h-5 w-5 text-primary" />
               <span>Guardget Admin</span>
             </div>
 
-            <div className="ml-auto flex items-center gap-4">
+            <div className={cn("ml-auto flex items-center gap-4")}>
               <Button variant="ghost" size="icon" className="rounded-full">
                 <Bell className="h-5 w-5" />
                 <span className="sr-only">Notifications</span>
@@ -197,9 +197,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </header>
 
           {/* Page content */}
-          <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
+          <main className="flex-1 overflow-auto p-4 md:p-6 bg-gray-100">{children}</main>
         </div>
       </div>
     </SidebarProvider>
   )
 }
+
