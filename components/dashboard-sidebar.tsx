@@ -140,16 +140,18 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
       {/* Sidebar */}
       <aside
         ref={sidebarRef}
-        className={
-          cn("fixed inset-y-0 left-0 z-50 bg-background",
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 bg-background",
           sidebarWidth,
           sidebarTransition,
           isMobile
             ? isSidebarOpen
               ? "translate-x-0"
               : "-translate-x-full"
-            : "translate-x-0"
-            ,"border-r-[1px] border-r-[#d0d0d0] border-l-0")}
+            : "translate-x-0",
+          "border-r-[1px] border-r-[#d0d0d0] border-l-0"
+        )}
+        
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
@@ -172,13 +174,14 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
               </span>
             </Link>
             <button
-                onClick={toggleSidebar}
-                className={cn(
-                  "p-2 rounded-md hover:bg-accent",
-                  isCollapsed && !isHovering && !isMobile ? "hidden" : "block"
-                )}
-              >
+              onClick={toggleSidebar}
+              className={cn(
+                "p-2 rounded-md hover:bg-accent",
+                isCollapsed && !isHovering && !isMobile ? "hidden" : "block"
+              )}
+            >
               {isMobile ? (
+                
                 <X className="h-5 w-5" />
               ) : isCollapsed ? (
                 <ChevronRight className="h-5 w-5" />
@@ -188,12 +191,11 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
             </button>
           </div>
 
-          <div
-
-            className={
-              cn(
+          <div className={cn(
               "flex items-center p-4 border-b",
-              isCollapsed && !isHovering ? "justify-center" : ""
+              isCollapsed && !isHovering
+                ? "justify-center"
+                : ""
             )}
           >
             <Avatar className="h-10 w-10">
@@ -222,7 +224,7 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
                 {user?.email}
               </p>
             </div>
-          </div>
+          
 
           <nav className="flex-1 overflow-y-auto p-2 space-y-1 border-b-[1px] border-b-[#d0d0d0]">
             <Link
@@ -365,8 +367,7 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
               </span>
             </Button>
           </div>
-        </div>
-        
+        </div>       
       </aside>
     </>
   );
