@@ -126,16 +126,13 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
   const sidebarTransition = "transition-all duration-300 ease-in-out";
 
   return (
-    <>
+    <div className="relative">
       {/* Mobile Toggle Button */}
       {isMobile && (
         <Button
           onClick={toggleSidebar}
           className="fixed bottom-4 right-4 z-50 p-3 rounded-full bg-primary text-primary-foreground shadow-lg md:hidden"
-        >
-          <Menu className="h-6 w-6" />
-        </button>
-      )}
+        ><Menu className="h-6 w-6" /></Button>)}
 
       {/* Sidebar */}
       <aside
@@ -151,7 +148,6 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
             : "translate-x-0",
           "border-r-[1px] border-r-[#d0d0d0] border-l-0"
         )}
-        
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
@@ -181,7 +177,6 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
               )}
             >
               {isMobile ? (
-                
                 <X className="h-5 w-5" />
               ) : isCollapsed ? (
                 <ChevronRight className="h-5 w-5" />
@@ -191,11 +186,10 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
             </button>
           </div>
 
-          <div className={cn(
-              "flex items-center p-4 border-b",
-              isCollapsed && !isHovering
-                ? "justify-center"
-                : ""
+          <div
+            className={cn(
+              "flex items-center p-4 border-b", isCollapsed && !isHovering ? "justify-center" : ""
+
             )}
           >
             <Avatar className="h-10 w-10">
@@ -224,10 +218,9 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
                 {user?.email}
               </p>
             </div>
-          
-
+          </div>
           <nav className="flex-1 overflow-y-auto p-2 space-y-1 border-b-[1px] border-b-[#d0d0d0]">
-            <Link
+           <Link
 
               href="/dashboard"
               className={cn(
@@ -357,7 +350,6 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
               onClick={onLogout}
             >
               <LogOut className="h-4 w-4 flex-shrink-0" />
-              <span
                 className={cn(
                   "ml-2",
                   isCollapsed && !isHovering ? "hidden" : "block"
@@ -369,7 +361,7 @@ const DashboardSidebar = ({ user, onLogout }: DashboardSidebarProps) => {
           </div>
         </div>       
       </aside>
-    </>
+    </div>
   );
 };
 
