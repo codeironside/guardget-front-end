@@ -1,35 +1,19 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
-import { useRouter } from "next/navigation";
-import {
-  AlertTriangle,
-  Home,
-  LogOut,
-  Settings,
-  Search,
-  Receipt,
-  CreditCard,
-  Users,
-} from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { usePathname, useRouter } from "next/navigation";
+import { AlertTriangle, Loader2 } from "lucide-react";
+import Link from "next/link";
+
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import DashboardSidebar from "./dashboard-sidebar";
-import { Loader2 } from "lucide-react";
-import { Sidebar } from "./ui/sidebar";
 
 import { useAuth } from "./context/auth-content";
-import Link from "next/link";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-} from "./ui/sidebar";
+
+
+
 
 type DashboardLayoutProps = {
   children: React.ReactNode;
@@ -125,10 +109,10 @@ export default function UserDashboardLayout({
       <DashboardSidebar />
 
       <main className="flex-1 p-4 md:p-6 overflow-y-auto">
-        <div className="space-y-6">
-          {/* Dashboard Header */}
+        
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+            <h1 className="text-2xl font-bold">Dashboard</h1>
+           
             <div className="flex items-center space-x-4">
               <Avatar className="h-8 w-8">
                 {user?.imageurl ? (
@@ -143,22 +127,24 @@ export default function UserDashboardLayout({
                   </AvatarFallback>
                 )}
               </Avatar>
+            
             </div>
           </div>
-          {!user.subActive &&
+          <div className="space-y-6">
+            {!user.subActive &&
           pathname !== "/dashboard" &&
           pathname !== "/dashboard/subscription" ? (
             <div className="space-y-4">
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Subscription Required</AlertTitle>
-              <AlertDescription>
-                You need an active subscription to access this feature. Please
-                subscribe to continue.
-              </AlertDescription>
-            </Alert>
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Subscription Required</AlertTitle>
+                <AlertDescription>
+                  You need an active subscription to access this feature. Please
+                  subscribe to continue.
+                </AlertDescription>
+              </Alert>
               <div className="flex justify-center">
-                <Link href="/dashboard/subscription">
+                <Link href="/dashboard/subscription" >
                   <Button>View Subscription Plans</Button>
                 </Link>
               </div>
@@ -166,6 +152,7 @@ export default function UserDashboardLayout({
           ) : (children)}
         </div>
       </main>
+      
     </div>
   );
 }
