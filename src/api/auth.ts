@@ -30,6 +30,46 @@ export interface ChangePasswordData {
   currentPassword: string;
   newPassword: string;
 }
+// interface UserDetails {
+//   _id: string;
+//   username: string;
+//   firstName: string;
+//   middleName: string;
+//   surName: string;
+//   role: string;
+//   country: string;
+//   stateOfOrigin: string;
+//   phoneNumber: string;
+//   keyholderPhone1: string;
+//   keyholderPhone2: string;
+//   email: string;
+//   emailVerified: boolean;
+//   subActive: boolean;
+//   createdAt: string; // or Date if you'll parse it
+//   updatedAt: string; // or Date if you'll parse it
+//   subActiveTill: string; // or Date if you'll parse it
+//   subId: string;
+//   subscription: string;
+// }
+
+// interface FinancialSummary {
+//   totalSpent: number;
+//   receiptCount: number;
+//   lastPayment: string; // or Date if you'll parse it
+//   averagePayment: number;
+// }
+
+// interface ApiResponseData {
+//   userDetails: UserDetails;
+//   devices: any[]; // Replace 'any' with a specific device interface if needed
+//   financialSummary: FinancialSummary;
+// }
+
+// interface ApiResponse {
+//   status: 'success' | 'error'; // or string if there are other possible values
+//   data: ApiResponseData;
+// }
+
 
 export const authApi = {
   login: async (credentials: LoginCredentials) => {
@@ -48,6 +88,11 @@ export const authApi = {
     };
     const response = await apiClient.post('/users/create', formattedData);
     return response.data;
+  },
+  getDashboard: async () => {
+    const response = await apiClient.get('/users/getme')
+    return response.data
+    
   },
 
   verifyOtp: async (data: OtpVerificationData) => {

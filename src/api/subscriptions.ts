@@ -18,7 +18,7 @@ export interface PaymentInitialization {
 
 export const subscriptionApi = {
   getAll: async () => {
-    const response = await apiClient.get('/subscription/getallsubscribtion');
+    const response = await apiClient.get('/subscription/getallSubscription');
     return response.data;
   },
 

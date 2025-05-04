@@ -1,13 +1,61 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Smartphone, Shield, AlertTriangle, Clock, ArrowRight, ChevronRight, CreditCard } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
-import LoadingSpinner from '../../components/LoadingSpinner';
-import { format } from 'date-fns';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import {
+  Smartphone,
+  Shield,
+  AlertTriangle,
+  Clock,
+  ArrowRight,
+  ChevronRight,
+  CreditCard,
+} from "lucide-react";
+import LoadingSpinner from "../../components/LoadingSpinner";
+import { format } from "date-fns";
+import { authApi } from "../../api/auth";
+
+interface UserDetails {
+  _id: string;
+  username: string;
+  firstName: string;
+  middleName: string;
+  surName: string;
+  role: string;
+  country: string;
+  stateOfOrigin: string;
+  phoneNumber: string;
+  keyholderPhone1: string;
+  keyholderPhone2: string;
+  email: string;
+  emailVerified: boolean;
+  subActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  subActiveTill: string;
+  subId: string;
+  subscription: string;
+}
+
+interface FinancialSummary {
+  totalSpent: number;
+  receiptCount: number;
+  lastPayment: string;
+  averagePayment: number;
+}
+
+interface ApiResponseData {
+  userDetails: UserDetails;
+  devices: any[];
+  financialSummary: FinancialSummary;
+}
+
+interface ApiResponse {
+  status: "success" | "error";
+  data: ApiResponseData;
+}
 
 const DashboardHomePage: React.FC = () => {
-  const { user } = useAuth();
+  const [userData, setUserData] = useState<ApiResponseData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -15,7 +63,10 @@ const DashboardHomePage: React.FC = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        // Data is already available through the auth context
+        const response = await authApi.getDashboard();
+        if (response.status === "success") {
+          setUserData(response.data);
+        }
         setLoading(false);
       } catch (error: any) {
         setError(error.message);
@@ -38,7 +89,7 @@ const DashboardHomePage: React.FC = () => {
     return (
       <div className="p-4 bg-error bg-opacity-10 text-error rounded-md">
         <p>{error}</p>
-        <button 
+        <button
           onClick={() => window.location.reload()}
           className="mt-2 text-sm font-medium hover:underline"
         >
@@ -52,7 +103,7 @@ const DashboardHomePage: React.FC = () => {
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-heading font-bold text-secondary dark:text-white mb-2">
-          Welcome back, {user?.firstName}!
+          Welcome back, {userData?.userDetails.firstName}!
         </h1>
         <p className="text-gray-600 dark:text-gray-300">
           Here's an overview of your device protection status.
@@ -71,9 +122,11 @@ const DashboardHomePage: React.FC = () => {
               <Smartphone className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">Registered Devices</p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">
+                Registered Devices
+              </p>
               <h3 className="text-2xl font-bold text-secondary dark:text-white">
-                {user?.devices?.length || 0}
+                {userData?.devices?.length || 0}
               </h3>
             </div>
           </div>
@@ -99,9 +152,11 @@ const DashboardHomePage: React.FC = () => {
               <Shield className="h-6 w-6 text-success" />
             </div>
             <div>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">Subscription Status</p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">
+                Subscription Status
+              </p>
               <h3 className="text-2xl font-bold text-secondary dark:text-white">
-                {user?.subActive ? 'Active' : 'Inactive'}
+                {userData?.userDetails.subActive ? "Active" : "Inactive"}
               </h3>
             </div>
           </div>
@@ -127,9 +182,11 @@ const DashboardHomePage: React.FC = () => {
               <CreditCard className="h-6 w-6 text-warning" />
             </div>
             <div>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">Total Spent</p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">
+                Total Spent
+              </p>
               <h3 className="text-2xl font-bold text-secondary dark:text-white">
-                ₦{user?.financialSummary?.totalSpent?.toLocaleString() || 0}
+                ₦{userData?.financialSummary?.totalSpent?.toLocaleString() || 0}
               </h3>
             </div>
           </div>
@@ -155,11 +212,16 @@ const DashboardHomePage: React.FC = () => {
               <AlertTriangle className="h-6 w-6 text-error" />
             </div>
             <div>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">Last Payment</p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">
+                Last Payment
+              </p>
               <h3 className="text-2xl font-bold text-secondary dark:text-white">
-                {user?.financialSummary?.lastPayment 
-                  ? format(new Date(user.financialSummary.lastPayment), 'MMM d, yyyy')
-                  : 'N/A'}
+                {userData?.financialSummary?.lastPayment
+                  ? format(
+                      new Date(userData.financialSummary.lastPayment),
+                      "MMM d, yyyy"
+                    )
+                  : "N/A"}
               </h3>
             </div>
           </div>
@@ -183,34 +245,49 @@ const DashboardHomePage: React.FC = () => {
           className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden"
         >
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-secondary dark:text-white">Subscription Details</h2>
+            <h2 className="text-lg font-semibold text-secondary dark:text-white">
+              Subscription Details
+            </h2>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Status</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Status
+                </p>
                 <p className="font-medium text-secondary dark:text-white">
-                  {user?.subActive ? 'Active' : 'Inactive'}
+                  {userData?.userDetails.subActive ? "Active" : "Inactive"}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Valid Until</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Valid Until
+                </p>
                 <p className="font-medium text-secondary dark:text-white">
-                  {user?.subActiveTill 
-                    ? format(new Date(user.subActiveTill), 'MMMM d, yyyy')
-                    : 'N/A'}
+                  {userData?.userDetails.subActiveTill
+                    ? format(
+                        new Date(userData.userDetails.subActiveTill),
+                        "MMMM d, yyyy"
+                      )
+                    : "N/A"}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Total Receipts</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Total Receipts
+                </p>
                 <p className="font-medium text-secondary dark:text-white">
-                  {user?.financialSummary?.receiptCount || 0}
+                  {userData?.financialSummary?.receiptCount || 0}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Average Payment</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Average Payment
+                </p>
                 <p className="font-medium text-secondary dark:text-white">
-                  ₦{user?.financialSummary?.averagePayment?.toLocaleString() || 0}
+                  ₦
+                  {userData?.financialSummary?.averagePayment?.toLocaleString() ||
+                    0}
                 </p>
               </div>
             </div>
@@ -224,7 +301,9 @@ const DashboardHomePage: React.FC = () => {
           className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden"
         >
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-secondary dark:text-white">Quick Actions</h2>
+            <h2 className="text-lg font-semibold text-secondary dark:text-white">
+              Quick Actions
+            </h2>
           </div>
           <div className="p-4">
             <div className="space-y-2">
@@ -235,7 +314,9 @@ const DashboardHomePage: React.FC = () => {
                 <div className="bg-primary bg-opacity-10 p-2 rounded-full mr-3">
                   <Smartphone className="h-4 w-4 text-primary" />
                 </div>
-                <span className="text-sm font-medium text-secondary dark:text-white">Register Device</span>
+                <span className="text-sm font-medium text-secondary dark:text-white">
+                  Register Device
+                </span>
                 <ArrowRight className="h-4 w-4 text-gray-400 ml-auto" />
               </Link>
               <Link
@@ -245,7 +326,9 @@ const DashboardHomePage: React.FC = () => {
                 <div className="bg-error bg-opacity-10 p-2 rounded-full mr-3">
                   <AlertTriangle className="h-4 w-4 text-error" />
                 </div>
-                <span className="text-sm font-medium text-secondary dark:text-white">Report Device</span>
+                <span className="text-sm font-medium text-secondary dark:text-white">
+                  Report Device
+                </span>
                 <ArrowRight className="h-4 w-4 text-gray-400 ml-auto" />
               </Link>
               <Link
@@ -255,7 +338,9 @@ const DashboardHomePage: React.FC = () => {
                 <div className="bg-warning bg-opacity-10 p-2 rounded-full mr-3">
                   <Shield className="h-4 w-4 text-warning" />
                 </div>
-                <span className="text-sm font-medium text-secondary dark:text-white">Check Status</span>
+                <span className="text-sm font-medium text-secondary dark:text-white">
+                  Check Status
+                </span>
                 <ArrowRight className="h-4 w-4 text-gray-400 ml-auto" />
               </Link>
             </div>

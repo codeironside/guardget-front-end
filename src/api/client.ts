@@ -1,7 +1,7 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-const API_BASE_URL = 'https://593b-102-90-82-201.ngrok-free.app/api/v1';
+const API_BASE_URL = "http://localhost:3124/api/v1";
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
