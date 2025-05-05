@@ -22,6 +22,7 @@ export const deviceApi = {
   },
 
   create: async (deviceData: Partial<Device>) => {
+    console.log(`device data ${JSON.stringify(deviceData)}`)
     const response = await apiClient.post('/device', deviceData);
     return response.data;
   },
