@@ -1,9 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Users, Smartphone, Receipt, TrendingUp, ChevronRight } from 'lucide-react';
-import { adminApi, AdminDashboardStats } from '../../api/admin';
-import LoadingSpinner from '../../components/LoadingSpinner';
-import { format } from 'date-fns';
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import {
+  Users,
+  Smartphone,
+  Receipt,
+  TrendingUp,
+  ChevronRight,
+} from "lucide-react";
+import { adminApi, AdminDashboardStats } from "../../api/admin";
+import LoadingSpinner from "../../components/LoadingSpinner";
+import { format } from "date-fns";
+import toast from "react-hot-toast";
 
 const AdminDashboardPage = () => {
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
@@ -18,11 +25,23 @@ const AdminDashboardPage = () => {
     try {
       setLoading(true);
       const response = await adminApi.getDashboardStats();
-      if (response.status === 'success') {
-        setStats(response.data);
+      console.log("API Response:", response); // Log response for debugging
+
+      if (response.users) {
+        // Store the data directly without additional transformations
+        setStats(response);
+      } else {
+        setError("Failed to fetch dashboard stats");
+        toast.error("Failed to fetch dashboard stats");
       }
     } catch (error: any) {
-      setError(error.message);
+      console.error("Error fetching dashboard stats:", error);
+      setError(
+        error.message || "An error occurred while fetching dashboard stats"
+      );
+      toast.error(
+        error.message || "An error occurred while fetching dashboard stats"
+      );
     } finally {
       setLoading(false);
     }
@@ -40,7 +59,7 @@ const AdminDashboardPage = () => {
     return (
       <div className="bg-error bg-opacity-10 text-error p-4 rounded-md">
         <p>{error}</p>
-        <button 
+        <button
           onClick={fetchDashboardStats}
           className="mt-2 text-sm font-medium hover:underline"
         >
@@ -50,12 +69,26 @@ const AdminDashboardPage = () => {
     );
   }
 
-  if (!stats) return null;
+  if (!stats) {
+    return (
+      <div className="bg-warning bg-opacity-10 text-warning p-4 rounded-md">
+        <p>No dashboard data available</p>
+        <button
+          onClick={fetchDashboardStats}
+          className="mt-2 text-sm font-medium hover:underline"
+        >
+          Reload dashboard
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Dashboard Overview</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+          Dashboard Overview
+        </h1>
         <p className="text-gray-600 dark:text-gray-300">
           Monitor your platform's performance and user activity
         </p>
@@ -74,7 +107,9 @@ const AdminDashboardPage = () => {
               <Users className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">Total Users</p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">
+                Total Users
+              </p>
               <h3 className="text-2xl font-bold text-secondary dark:text-white">
                 {stats.users.total}
               </h3>
@@ -98,7 +133,9 @@ const AdminDashboardPage = () => {
               <Smartphone className="h-6 w-6 text-warning" />
             </div>
             <div>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">Total Devices</p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">
+                Total Devices
+              </p>
               <h3 className="text-2xl font-bold text-secondary dark:text-white">
                 {stats.devices.total}
               </h3>
@@ -106,11 +143,15 @@ const AdminDashboardPage = () => {
           </div>
           <div className="mt-4">
             <div className="space-y-1">
-              {stats.devices.byType.map(type => (
-                <p key={type._id} className="text-sm text-gray-500 dark:text-gray-400">
-                  {type.count} {type._id}
-                </p>
-              ))}
+              {stats.devices.byType &&
+                stats.devices.byType.map((type) => (
+                  <p
+                    key={type._id}
+                    className="text-sm text-gray-500 dark:text-gray-400"
+                  >
+                    {type.count} {type._id}
+                  </p>
+                ))}
             </div>
           </div>
         </motion.div>
@@ -126,7 +167,9 @@ const AdminDashboardPage = () => {
               <Receipt className="h-6 w-6 text-success" />
             </div>
             <div>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">Total Revenue</p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">
+                Total Revenue
+              </p>
               <h3 className="text-2xl font-bold text-secondary dark:text-white">
                 ₦{stats.receipts.revenue.toLocaleString()}
               </h3>
@@ -150,18 +193,26 @@ const AdminDashboardPage = () => {
               <TrendingUp className="h-6 w-6 text-error" />
             </div>
             <div>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">Subscription Tiers</p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">
+                Subscription Tiers
+              </p>
               <h3 className="text-2xl font-bold text-secondary dark:text-white">
-                {stats.users.subscriptionTiers.length}
+                {stats.users.subscriptionTiers
+                  ? stats.users.subscriptionTiers.length
+                  : 0}
               </h3>
             </div>
           </div>
           <div className="mt-4">
-            {stats.users.subscriptionTiers.map(tier => (
-              <p key={tier._id} className="text-sm text-gray-500 dark:text-gray-400">
-                {tier._id}: {tier.count} users
-              </p>
-            ))}
+            {stats.users.subscriptionTiers &&
+              stats.users.subscriptionTiers.map((tier) => (
+                <p
+                  key={tier._id}
+                  className="text-sm text-gray-500 dark:text-gray-400"
+                >
+                  {tier._id}: {tier.count} users
+                </p>
+              ))}
           </div>
         </motion.div>
       </div>
@@ -176,35 +227,51 @@ const AdminDashboardPage = () => {
           className="bg-white dark:bg-gray-800 rounded-lg shadow-sm"
         >
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Users</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Recent Users
+            </h2>
           </div>
           <div className="p-6">
             <div className="space-y-4">
-              {stats.users.recent.map((user) => (
-                <div key={user._id} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold">
-                      {user.username[0].toUpperCase()}
+              {stats.users.recent &&
+                stats.users.recent.map((user) => (
+                  <div
+                    key={user._id}
+                    className="flex items-center justify-between"
+                  >
+                    <div className="flex items-center">
+                      <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold">
+                        {user.username && user.username.length > 0
+                          ? user.username[0].toUpperCase()
+                          : "U"}
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {user.username}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {user.email}
+                        </p>
+                      </div>
                     </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {user.username}
+                    <div className="text-right">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        {user.createdAt
+                          ? format(new Date(user.createdAt), "MMM d, yyyy")
+                          : "N/A"}
+                      </span>
+                      <p
+                        className={`text-sm ${
+                          user.subscriptionStatus === "Active"
+                            ? "text-success"
+                            : "text-warning"
+                        }`}
+                      >
+                        {user.subscriptionStatus}
                       </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {format(new Date(user.createdAt), 'MMM d, yyyy')}
-                    </span>
-                    <p className={`text-sm ${
-                      user.subscriptionStatus === 'Active' ? 'text-success' : 'text-warning'
-                    }`}>
-                      {user.subscriptionStatus}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                ))}
             </div>
           </div>
         </motion.div>
@@ -217,30 +284,94 @@ const AdminDashboardPage = () => {
           className="bg-white dark:bg-gray-800 rounded-lg shadow-sm"
         >
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Devices</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Recent Devices
+            </h2>
           </div>
           <div className="p-6">
             <div className="space-y-4">
-              {stats.devices.recent.map((device) => (
-                <div key={device._id} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="bg-warning bg-opacity-10 p-2 rounded-full">
-                      <Smartphone className="h-5 w-5 text-warning" />
+              {stats.devices.recent &&
+                stats.devices.recent.map((device) => (
+                  <div
+                    key={device._id}
+                    className="flex items-center justify-between"
+                  >
+                    <div className="flex items-center">
+                      <div className="bg-warning bg-opacity-10 p-2 rounded-full">
+                        <Smartphone className="h-5 w-5 text-warning" />
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {device.name}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {device.status}
+                        </p>
+                      </div>
                     </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {device.name}
-                      </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {device.status}
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      {device.createdAt
+                        ? format(new Date(device.createdAt), "MMM d, yyyy")
+                        : "N/A"}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Recent Receipts */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.6 }}
+          className="bg-white dark:bg-gray-800 rounded-lg shadow-sm lg:col-span-2"
+        >
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Recent Transactions
+            </h2>
+          </div>
+          <div className="p-6">
+            <div className="space-y-4">
+              {stats.receipts.recent &&
+                stats.receipts.recent.map((receipt) => (
+                  <div
+                    key={receipt._id}
+                    className="flex items-center justify-between"
+                  >
+                    <div className="flex items-center">
+                      <div className="bg-success bg-opacity-10 p-2 rounded-full">
+                        <Receipt className="h-5 w-5 text-success" />
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          ₦{receipt.amount.toLocaleString()}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          ID: {receipt._id.substring(0, 8)}...
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        {receipt.createdAt
+                          ? format(new Date(receipt.createdAt), "MMM d, yyyy")
+                          : "N/A"}
+                      </span>
+                      <p
+                        className={`text-sm ${
+                          receipt.status === "completed"
+                            ? "text-success"
+                            : "text-warning"
+                        }`}
+                      >
+                        {receipt.status.charAt(0).toUpperCase() +
+                          receipt.status.slice(1)}
                       </p>
                     </div>
                   </div>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {format(new Date(device.createdAt), 'MMM d, yyyy')}
-                  </span>
-                </div>
-              ))}
+                ))}
             </div>
           </div>
         </motion.div>

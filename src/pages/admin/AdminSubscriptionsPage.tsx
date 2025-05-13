@@ -44,7 +44,7 @@ const AdminSubscriptionsPage = () => {
   const fetchSubscriptions = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get('/subscription/getallsubscribtion');
+      const response = await apiClient.get("/subscription/getallSubscription");
       
       if (response.data.status === 'success') {
         setSubscriptions(response.data.data);
@@ -109,7 +109,10 @@ const AdminSubscriptionsPage = () => {
         }
       } else {
         // Create new subscription
-        const response = await apiClient.post('/subscription/createSubscription', formData);
+        const response = await apiClient.post(
+          "/subscription/createSubcription",
+          formData
+        );
         if (response.data.status === 'success') {
           toast.success('Subscription plan created successfully');
         }

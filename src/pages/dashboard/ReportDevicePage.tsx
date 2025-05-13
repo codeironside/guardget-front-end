@@ -1,59 +1,61 @@
-import React, { useState, useEffect } from 'react';
-import { AlertTriangle, AlertCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
-import LoadingSpinner from '../../components/LoadingSpinner';
+import React, { useState, useEffect } from "react";
+import { AlertTriangle, AlertCircle } from "lucide-react";
+import { motion } from "framer-motion";
+import LoadingSpinner from "../../components/LoadingSpinner";
+import { deviceApi } from "../../api/devices";
+import toast from "react-hot-toast";
 
 interface Device {
   id: string;
   name: string;
   model: string;
-  type: 'phone' | 'laptop';
-  status: 'active' | 'reported' | 'missing' | 'stolen';
-  serialNumber: string;
-  imei?: string;
+  type: "phone" | "laptop";
+  status: "active" | "reported" | "missing" | "stolen";
+  SN: string;
+  IMEI1?: string;
+}
+
+interface ReportDeviceRequest {
+  deviceId: string;
+  reportType: "missing" | "stolen";
+  description: string;
+  location: string;
 }
 
 const ReportDevicePage = () => {
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDevice, setSelectedDevice] = useState<string>('');
-  const [reportType, setReportType] = useState<'missing' | 'stolen'>('missing');
-  const [description, setDescription] = useState('');
-  const [location, setLocation] = useState('');
+  const [selectedDevice, setSelectedDevice] = useState<string>("");
+  const [reportType, setReportType] = useState<"missing" | "stolen">("missing");
+  const [description, setDescription] = useState("");
+  const [location, setLocation] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    // Simulate API call to fetch user's devices
-    setTimeout(() => {
-      setDevices([
-        {
-          id: '1',
-          name: 'iPhone 14 Pro',
-          model: 'A2650',
-          type: 'phone',
-          status: 'active',
-          imei: '123456789012345',
-          serialNumber: 'FFMX3LLFX'
-        },
-        {
-          id: '2',
-          name: 'MacBook Pro',
-          model: '14-inch, 2023',
-          type: 'laptop',
-          status: 'active',
-          serialNumber: 'C02G30TXQ6L7'
-        }
-      ]);
-      setLoading(false);
-    }, 1000);
+    fetchDevices();
   }, []);
+
+  const fetchDevices = async () => {
+    try {
+      const response = await deviceApi.getAll();
+      if (response.status === "success") {
+        setDevices(response.data);
+      }
+    } catch (error: any) {
+      setError(error.message);
+      toast.error(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDevice || !reportType || !description || !location) {
-      setError('Please fill in all required fields');
+      setError("Please fill in all required fields");
+      toast.error("Please fill in all required fields");
       return;
     }
 
@@ -61,25 +63,41 @@ const ReportDevicePage = () => {
     setError(null);
     setSuccess(null);
 
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Update device status locally
-      setDevices(prevDevices =>
-        prevDevices.map(device =>
-          device.id === selectedDevice
-            ? { ...device, status: reportType }
-            : device
-        )
-      );
+    const reportData: ReportDeviceRequest = {
+      deviceId: selectedDevice,
+      reportType,
+      description,
+      location,
+    };
 
-      setSuccess('Device has been reported successfully');
-      setSelectedDevice('');
-      setDescription('');
-      setLocation('');
-    } catch (error) {
-      setError('Failed to report device. Please try again.');
+    try {
+      const response = await deviceApi.updateStatus(reportData);
+
+      if (response.status === "success") {
+        // Update device status locally
+        setDevices((prevDevices) =>
+          prevDevices.map((device) =>
+            device.id === selectedDevice
+              ? { ...device, status: reportType }
+              : device
+          )
+        );
+
+        setSuccess("Device has been reported successfully");
+        toast.success("Device has been reported successfully");
+
+        // Reset form
+        setSelectedDevice("");
+        setDescription("");
+        setLocation("");
+      } else {
+        throw new Error(response.message || "Failed to report device");
+      }
+    } catch (error: any) {
+      setError(error.message || "Failed to report device. Please try again.");
+      toast.error(
+        error.message || "Failed to report device. Please try again."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -103,13 +121,18 @@ const ReportDevicePage = () => {
       >
         <div className="flex items-center gap-3 mb-8">
           <AlertTriangle className="h-8 w-8 text-error" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Report a Device</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Report a Device
+          </h1>
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="device" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label
+                htmlFor="device"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
                 Select Device
               </label>
               <select
@@ -120,11 +143,17 @@ const ReportDevicePage = () => {
                 required
               >
                 <option value="">Choose a device</option>
-                {devices.filter(d => d.status === 'active').map(device => (
-                  <option key={device.id} value={device.id}>
-                    {device.name} ({device.type === 'phone' ? `IMEI: ${device.imei}` : `S/N: ${device.serialNumber}`})
-                  </option>
-                ))}
+                {devices
+                  .filter((d) => d.status === "active")
+                  .map((device) => (
+                    <option key={device.id} value={device.id}>
+                      {device.name} (
+                      {device.type === "phone"
+                        ? `IMEI: ${device.IMEI1}`
+                        : `S/N: ${device.SN}`}
+                      )
+                    </option>
+                  ))}
               </select>
             </div>
 
@@ -137,27 +166,38 @@ const ReportDevicePage = () => {
                   <input
                     type="radio"
                     value="missing"
-                    checked={reportType === 'missing'}
-                    onChange={(e) => setReportType(e.target.value as 'missing' | 'stolen')}
+                    checked={reportType === "missing"}
+                    onChange={(e) =>
+                      setReportType(e.target.value as "missing" | "stolen")
+                    }
                     className="form-radio h-4 w-4 text-primary"
                   />
-                  <span className="ml-2 text-gray-700 dark:text-gray-300">Missing</span>
+                  <span className="ml-2 text-gray-700 dark:text-gray-300">
+                    Missing
+                  </span>
                 </label>
                 <label className="flex items-center">
                   <input
                     type="radio"
                     value="stolen"
-                    checked={reportType === 'stolen'}
-                    onChange={(e) => setReportType(e.target.value as 'missing' | 'stolen')}
+                    checked={reportType === "stolen"}
+                    onChange={(e) =>
+                      setReportType(e.target.value as "missing" | "stolen")
+                    }
                     className="form-radio h-4 w-4 text-primary"
                   />
-                  <span className="ml-2 text-gray-700 dark:text-gray-300">Stolen</span>
+                  <span className="ml-2 text-gray-700 dark:text-gray-300">
+                    Stolen
+                  </span>
                 </label>
               </div>
             </div>
 
             <div>
-              <label htmlFor="location" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label
+                htmlFor="location"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
                 Last Known Location
               </label>
               <input
@@ -172,7 +212,10 @@ const ReportDevicePage = () => {
             </div>
 
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label
+                htmlFor="description"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
                 Description
               </label>
               <textarea
@@ -212,7 +255,7 @@ const ReportDevicePage = () => {
                     <span className="ml-2">Reporting...</span>
                   </>
                 ) : (
-                  'Report Device'
+                  "Report Device"
                 )}
               </button>
             </div>
