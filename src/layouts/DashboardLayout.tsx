@@ -254,12 +254,21 @@ const DashboardLayout: React.FC = () => {
                 {theme === "dark" ? "🌙" : "☀️"}
               </button>
               <div className="flex items-center">
-                <div
-                  className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold"
-                  title={user?.name || user?.username || user?.email || "User"}
-                >
-                  {userInitials}
-                </div>
+                {user?.imageurl ? (
+                  // Display profile image if available
+                  <div className="w-10 h-10 rounded-full overflow-hidden">
+                    <img
+                      src={user.imageurl}
+                      alt={`${user.firstName}'s profile`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  // Display initials if no image is available
+                  <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold">
+                    {getUserInitials()}
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -73,7 +73,7 @@ export interface ChangePasswordData {
 
 export const authApi = {
   login: async (credentials: LoginCredentials) => {
-    const response = await apiClient.post('/users/login', credentials);
+    const response = await apiClient.post("/users/login", credentials);
     return response.data;
   },
 
@@ -86,53 +86,59 @@ export const authApi = {
       country: data.country.toUpperCase(),
       stateOfOrigin: data.stateOfOrigin.toUpperCase(),
     };
-    const response = await apiClient.post('/users/create', formattedData);
+    const response = await apiClient.post("/users/create", formattedData);
     return response.data;
   },
   getDashboard: async () => {
-    const response = await apiClient.get('/users/getme')
-    return response.data
-    
+    const response = await apiClient.get("/users/getme");
+    return response.data;
   },
 
   verifyOtp: async (data: OtpVerificationData) => {
-    const response = await apiClient.post('/users/validateOtp', data);
+    const response = await apiClient.post("/users/validateOtp", data);
     return response.data;
   },
 
   forgotPassword: async (email: string) => {
-    const response = await apiClient.post('/forgetpassword', { email });
+    const response = await apiClient.post("/forgetpassword", { email });
     return response.data;
   },
 
   resetPassword: async (token: string, password: string) => {
-    const response = await apiClient.post('/auth/reset-password', { token, password });
+    const response = await apiClient.post("/auth/reset-password", {
+      token,
+      password,
+    });
     return response.data;
   },
 
   getUserProfile: async () => {
-    const response = await apiClient.get('/users/getme');
+    const response = await apiClient.get("/users/getme");
     return response.data;
   },
 
   updateProfile: async (data: Partial<RegisterData>) => {
-    const response = await apiClient.put('/users/update-user', data);
+    const response = await apiClient.put("/users/update-user", data);
     return response.data;
   },
 
   uploadProfilePicture: async (file: File) => {
     const formData = new FormData();
-    formData.append('image', file);
-    const response = await apiClient.put('/users/upload-profile-picture', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    formData.append("file", file);
+    const response = await apiClient.put(
+      "/users/upload-profile-picture",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
     return response.data;
   },
 
   changePassword: async (data: ChangePasswordData) => {
-    const response = await apiClient.put('/users/change-password', data);
+    const response = await apiClient.put("/users/change-password", data);
     return response.data;
   },
 };
