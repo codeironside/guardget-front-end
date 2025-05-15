@@ -12,15 +12,19 @@
   "dependencies": {
     "@fontsource/anta": "^5.0.8",
     "@fontsource/montserrat": "^5.0.16",
+    "@types/debounce": "^1.2.4",
+    "@types/lodash": "^4.17.16",
     "axios": "^1.6.7",
+    "date-fns": "^3.3.1",
+    "debounce": "^2.2.0",
+    "framer-motion": "^11.0.6",
+    "lodash": "^4.17.21",
     "lucide-react": "^0.344.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.22.3",
-    "framer-motion": "^11.0.6",
     "react-hook-form": "^7.50.1",
-    "date-fns": "^3.3.1",
-    "react-hot-toast": "^2.4.1"
+    "react-hot-toast": "^2.4.1",
+    "react-router-dom": "^6.22.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
