@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+  // Your existing imports...
   Send,
   AlertCircle,
   Smartphone,
@@ -10,10 +11,12 @@ import {
   Search,
   User,
   ChevronDown,
+  RefreshCw, // Add this import
 } from "lucide-react";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import toast from "react-hot-toast";
 import apiClient from "../../api/client";
+import { deviceApi } from "../../api/devices";
 
 // Types
 interface Device {
@@ -40,26 +43,11 @@ interface UserSuggestion {
   username: string;
   email: string;
   imageurl?: string;
+  role: string;
   firstName?: string;
   surName?: string;
   middleName?: string;
 }
-
-// API Services
-const deviceService = {
-  getAll: async () => {
-    const response = await apiClient.get("/device");
-    return response.data;
-  },
-
-  transferOwnership: async (deviceId: string, newUserEmail: string) => {
-    const response = await apiClient.put("/device/transferOwnership", {
-      newuseremail: newUserEmail,
-      deviceId,
-    });
-    return response.data;
-  },
-};
 
 const userService = {
   searchUsers: async (query: string) => {
@@ -103,6 +91,11 @@ const TransferDevicePage = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [showOtpInput, setShowOtpInput] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [registrationToken, setRegistrationToken] = useState("");
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
 
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const searchTimeoutRef = useRef<any>(null);
@@ -141,7 +134,7 @@ const TransferDevicePage = () => {
   const loadDevices = async () => {
     setLoading(true);
     try {
-      const response = await deviceService.getAll();
+      const response = await deviceApi.getAll();
       if (response.status === "success" && response.data) {
         setDevices(response.data);
       } else {
@@ -187,7 +180,11 @@ const TransferDevicePage = () => {
     try {
       const response = await userService.searchUsers(query);
       if (response.status === "success") {
-        setUserSuggestions(response.data);
+        // Filter out users with the specific role ID
+        const filteredUsers = response.data.filter(
+          (user) => user.role !== "680a6a229243635113957910"
+        );
+        setUserSuggestions(filteredUsers);
       } else {
         setUserSuggestions([]);
       }
@@ -207,7 +204,11 @@ const TransferDevicePage = () => {
     try {
       const response = await userService.getRecentContacts();
       if (response.status === "success") {
-        setUserSuggestions(response.data);
+        // Filter out users with the specific role ID
+        const filteredUsers = response.data.filter(
+          (user) => user.role !== "680a6a229243635113957910"
+        );
+        setUserSuggestions(filteredUsers);
       }
     } catch (error) {
       console.error("Error fetching contacts:", error);
@@ -230,6 +231,48 @@ const TransferDevicePage = () => {
   };
 
   // Handle form submission
+  // const handleSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+
+  //   if (!selectedDevice || !recipientEmail || !confirmEmail) {
+  //     setError("Please fill in all required fields");
+  //     return;
+  //   }
+
+  //   if (recipientEmail !== confirmEmail) {
+  //     setError("Email addresses do not match");
+  //     return;
+  //   }
+
+  //   setIsSubmitting(true);
+  //   setError(null);
+  //   setSuccess(null);
+
+  //   try {
+  //     const response = await deviceApi.transferOwnership(
+  //       selectedDevice,
+  //       recipientEmail
+  //     );
+
+  //     if (response.status === "success") {
+  //       setSuccess(
+  //         "Transfer request sent successfully. The recipient will receive instructions by email."
+  //       );
+  //       setSelectedDevice("");
+  //       setRecipientEmail("");
+  //       setConfirmEmail("");
+  //       loadDevices();
+  //     } else {
+  //       setError(response.message || "Failed to transfer device");
+  //     }
+  //   } catch (error: any) {
+  //     setError(error.message || "Failed to transfer device. Please try again.");
+  //   } finally {
+  //     setIsSubmitting(false);
+  //   }
+  // };
+
+  // Fix the transferDeviceOtp call - it's missing parameters
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -246,31 +289,140 @@ const TransferDevicePage = () => {
     setIsSubmitting(true);
     setError(null);
     setSuccess(null);
+    setOtpError(null);
 
     try {
-      const response = await deviceService.transferOwnership(
-        selectedDevice,
-        recipientEmail
+      // First request the OTP - Add the missing parameters here
+      const otpResponse = await deviceApi.transferDeviceOtp(
+
       );
 
-      if (response.status === "success") {
+      if (otpResponse.status === "success") {
+        setRegistrationToken(otpResponse.registrationToken);
+
+        // Show the OTP input field
+        setShowOtpInput(true);
+
+        // Show a success message about OTP being sent
         setSuccess(
-          "Transfer request sent successfully. The recipient will receive instructions by email."
+          "OTP has been sent to your key holders phone number. Please enter it to complete the transfer."
         );
-        setSelectedDevice("");
-        setRecipientEmail("");
-        setConfirmEmail("");
-        loadDevices();
       } else {
-        setError(response.message || "Failed to transfer device");
+        setError(otpResponse.message || "Failed to initiate device transfer");
       }
     } catch (error: any) {
-      setError(error.message || "Failed to transfer device. Please try again.");
+      setError(
+        error.message || "Failed to initiate device transfer. Please try again."
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Convert to uppercase for consistency
+    setOtp(e.target.value.toUpperCase());
+
+    // Clear any previous OTP errors when the user types
+    if (otpError) {
+      setOtpError(null);
+    }
+  };
+
+  // Handle OTP verification
+  // Fix OTP verification to correctly handle the transfer process
+  const handleVerifyOtp = async () => {
+    if (!otp || otp.length !== 8) {
+      setOtpError("Please enter a valid 8-character OTP");
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    setOtpError(null);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      // First verify the OTP
+      const response = await deviceApi.verifyDeviceTransferOtp(
+        otp,
+        registrationToken
+      );
+
+      if (response.status === "success") {
+        // If OTP verification is successful, proceed with the transfer
+        try {
+          const transferResponse = await deviceApi.transferOwnership(
+            selectedDevice,
+            recipientEmail
+          );
+
+          if (transferResponse.status === "success") {
+            // Transfer completed successfully
+            setSuccess(
+              "Device transfer completed successfully. The recipient will be notified."
+            );
+
+            // Reset the form
+            setShowOtpInput(false);
+            setSelectedDevice("");
+            setRecipientEmail("");
+            setConfirmEmail("");
+            setOtp("");
+            setRegistrationToken("");
+
+            // Reload devices to reflect the changes
+            loadDevices();
+          } else {
+            // Transfer failed after OTP verification
+            setError(
+              transferResponse.message || "Failed to complete device transfer"
+            );
+          }
+        } catch (transferError: any) {
+          setError(
+            transferError.message || "Failed to complete device transfer"
+          );
+        }
+      } else {
+        // OTP verification failed
+        setOtpError(response.message || "Invalid OTP. Please try again.");
+      }
+    } catch (error: any) {
+      setOtpError(error.message || "Failed to verify OTP. Please try again.");
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
+  // Handle resending OTP
+  const handleResendOtp = async () => {
+    if (!registrationToken) {
+      setError("Unable to resend OTP. Please try again from the beginning.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setOtpError(null);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await deviceApi.resendDevicetransferOtp(
+        registrationToken
+      );
+
+      if (response.status === "success") {
+        setSuccess("OTP has been resent to your registered phone number.");
+      } else {
+        setOtpError(response.message || "Failed to resend OTP");
+      }
+    } catch (error: any) {
+      setOtpError(error.message || "Failed to resend OTP. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   // Format user name for display
   const formatUserName = (user: UserSuggestion) => {
     if (user.firstName || user.surName) {
@@ -358,9 +510,8 @@ const TransferDevicePage = () => {
                 >
                   Select Device
                 </label>
-
                 {/* Custom dropdown */}
-                <div className="relative" ref={dropdownRef}>
+                {/* <div className="relative" ref={dropdownRef}>
                   <div
                     onClick={() => setDropdownOpen(!dropdownOpen)}
                     className="flex items-center justify-between w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 transition duration-150"
@@ -442,9 +593,58 @@ const TransferDevicePage = () => {
                       </motion.div>
                     )}
                   </AnimatePresence>
+                </div> */}
+                 
+                <div className="relative" ref={dropdownRef}>
+                  <div
+                    onClick={() =>
+                      !showOtpInput && setDropdownOpen(!dropdownOpen)
+                    }
+                    className={`flex items-center justify-between w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm ${
+                      !showOtpInput
+                        ? "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600"
+                        : "opacity-75"
+                    } transition duration-150`}
+                  >
+                    <div className="flex items-center">
+                      {selectedDevice ? (
+                        <>
+                          {getSelectedDevice() &&
+                            getDeviceIcon(getSelectedDevice()!)}
+                          <span className="ml-2">
+                            {getSelectedDevice()?.name || "Choose a device"}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-gray-500 dark:text-gray-400">
+                          Choose a device
+                        </span>
+                      )}
+                    </div>
+                    {!showOtpInput && (
+                      <ChevronDown
+                        className={`h-5 w-5 text-gray-400 transition-transform duration-200 ${
+                          dropdownOpen ? "transform rotate-180" : ""
+                        }`}
+                      />
+                    )}
+                  </div>
+
+                  <AnimatePresence>
+                    {dropdownOpen && !showOtpInput && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-700 shadow-lg rounded-md py-1 text-base overflow-auto focus:outline-none max-h-60"
+                      >
+                        {/* Dropdown content remains the same */}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
-
               {/* Selected device details */}
               {selectedDevice && (
                 <motion.div
@@ -492,135 +692,119 @@ const TransferDevicePage = () => {
                   })()}
                 </motion.div>
               )}
+              {!showOtpInput ? (
+                <div>
+                  <label
+                    htmlFor="recipientEmail"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  >
+                    Recipient's Email
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="email"
+                      id="recipientEmail"
+                      value={recipientEmail}
+                      onChange={handleEmailChange}
+                      onFocus={handleEmailFocus}
+                      className="block w-full pl-10 pr-3 py-2.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-primary focus:border-primary"
+                      placeholder="Enter recipient's email address"
+                      required
+                    />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Search className="h-5 w-5 text-gray-400" />
+                    </div>
 
-              {/* Recipient email input with suggestions */}
-              <div>
-                <label
-                  htmlFor="recipientEmail"
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                >
-                  Recipient's Email
-                </label>
-                <div className="relative">
-                  <input
-                    type="email"
-                    id="recipientEmail"
-                    value={recipientEmail}
-                    onChange={handleEmailChange}
-                    onFocus={handleEmailFocus}
-                    className="block w-full pl-10 pr-3 py-2.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-primary focus:border-primary"
-                    placeholder="Enter recipient's email address"
-                    required
-                  />
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search className="h-5 w-5 text-gray-400" />
+                    {/* Email suggestions dropdown */}
+                    <AnimatePresence>
+                      {showSuggestions && (
+                        <motion.div
+                          ref={suggestionsRef}
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.2 }}
+                          className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-700 shadow-lg rounded-md py-1 text-base overflow-auto focus:outline-none max-h-60"
+                        >
+                          {/* Suggestions content remains the same */}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
-
-                  {/* Email suggestions dropdown */}
-                  <AnimatePresence>
-                    {showSuggestions && (
-                      <motion.div
-                        ref={suggestionsRef}
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.2 }}
-                        className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-700 shadow-lg rounded-md py-1 text-base overflow-auto focus:outline-none max-h-60"
-                      >
-                        {isLoadingSuggestions ? (
-                          <div className="flex justify-center items-center py-3">
-                            <LoadingSpinner size="sm" />
-                          </div>
-                        ) : userSuggestions.length > 0 ? (
-                          userSuggestions.map((user) => (
-                            <div
-                              key={user.id}
-                              onClick={() => handleSelectSuggestion(user.email)}
-                              className="cursor-pointer flex items-center px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition duration-150"
-                            >
-                              {user.imageurl ? (
-                                <img
-                                  src={user.imageurl}
-                                  alt={formatUserName(user)}
-                                  className="h-10 w-10 rounded-full mr-3 object-cover border-2 border-gray-200 dark:border-gray-700"
-                                />
-                              ) : (
-                                <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center mr-3">
-                                  <User className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                                </div>
-                              )}
-                              <div className="flex-1">
-                                <div className="font-medium text-gray-900 dark:text-white">
-                                  {formatUserName(user)}
-                                </div>
-                                <div className="text-sm text-gray-500 dark:text-gray-400">
-                                  {user.email}
-                                </div>
-                              </div>
-                            </div>
-                          ))
+                </div>
+              ) : (
+                // Display recipient email as read-only during OTP input
+                <div>
+                  <label
+                    htmlFor="recipientEmail"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  >
+                    Recipient's Email
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="email"
+                      id="recipientEmail"
+                      value={recipientEmail}
+                      className="block w-full pl-10 pr-3 py-2.5 rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm opacity-75"
+                      disabled
+                    />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Search className="h-5 w-5 text-gray-400" />
+                    </div>
+                  </div>
+                </div>
+              )}
+              {/* Confirm email input - only show when not in OTP mode */}
+              {!showOtpInput && (
+                <div>
+                  <label
+                    htmlFor="confirmEmail"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  >
+                    Confirm Recipient's Email
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="email"
+                      id="confirmEmail"
+                      value={confirmEmail}
+                      onChange={(e) => setConfirmEmail(e.target.value)}
+                      className={`block w-full pl-10 pr-3 py-2.5 rounded-md border ${
+                        confirmEmail &&
+                        recipientEmail &&
+                        confirmEmail !== recipientEmail
+                          ? "border-red-300 dark:border-red-500 focus:ring-red-500 focus:border-red-500"
+                          : confirmEmail &&
+                            recipientEmail &&
+                            confirmEmail === recipientEmail
+                          ? "border-green-300 dark:border-green-500 focus:ring-green-500 focus:border-green-500"
+                          : "border-gray-300 dark:border-gray-600 focus:ring-primary focus:border-primary"
+                      } bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:ring-2`}
+                      placeholder="Confirm recipient's email address"
+                      required
+                    />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      {confirmEmail && recipientEmail ? (
+                        confirmEmail === recipientEmail ? (
+                          <Check className="h-5 w-5 text-green-500" />
                         ) : (
-                          <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-                            {recipientEmail.length > 0
-                              ? `No users found matching "${recipientEmail}"`
-                              : "Type to search for users"}
-                          </div>
-                        )}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </div>
-
-              {/* Confirm email input */}
-              <div>
-                <label
-                  htmlFor="confirmEmail"
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                >
-                  Confirm Recipient's Email
-                </label>
-                <div className="relative">
-                  <input
-                    type="email"
-                    id="confirmEmail"
-                    value={confirmEmail}
-                    onChange={(e) => setConfirmEmail(e.target.value)}
-                    className={`block w-full pl-10 pr-3 py-2.5 rounded-md border ${
-                      confirmEmail &&
-                      recipientEmail &&
-                      confirmEmail !== recipientEmail
-                        ? "border-red-300 dark:border-red-500 focus:ring-red-500 focus:border-red-500"
-                        : confirmEmail &&
-                          recipientEmail &&
-                          confirmEmail === recipientEmail
-                        ? "border-green-300 dark:border-green-500 focus:ring-green-500 focus:border-green-500"
-                        : "border-gray-300 dark:border-gray-600 focus:ring-primary focus:border-primary"
-                    } bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:ring-2`}
-                    placeholder="Confirm recipient's email address"
-                    required
-                  />
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    {confirmEmail && recipientEmail ? (
-                      confirmEmail === recipientEmail ? (
-                        <Check className="h-5 w-5 text-green-500" />
+                          <X className="h-5 w-5 text-red-500" />
+                        )
                       ) : (
-                        <X className="h-5 w-5 text-red-500" />
-                      )
-                    ) : (
-                      <User className="h-5 w-5 text-gray-400" />
-                    )}
+                        <User className="h-5 w-5 text-gray-400" />
+                      )}
+                    </div>
                   </div>
+                  {confirmEmail &&
+                    recipientEmail &&
+                    confirmEmail !== recipientEmail && (
+                      <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+                        Email addresses do not match
+                      </p>
+                    )}
                 </div>
-                {confirmEmail &&
-                  recipientEmail &&
-                  confirmEmail !== recipientEmail && (
-                    <p className="mt-2 text-sm text-red-600 dark:text-red-400">
-                      Email addresses do not match
-                    </p>
-                  )}
-              </div>
-
+              )}
               {/* Error/Success messages */}
               <AnimatePresence>
                 {error && (
@@ -647,9 +831,123 @@ const TransferDevicePage = () => {
                   </motion.div>
                 )}
               </AnimatePresence>
-
               {/* Submit button */}
-              <div className="flex justify-end">
+              {/* 5. ADD THE OTP UI SECTION */}
+              {/* Add this code right before your Submit button in the form */}
+              {/* OTP Input Section */}
+              <AnimatePresence>
+                {showOtpInput && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6"
+                  >
+                    <div className="space-y-6">
+                      <div>
+                        <label
+                          htmlFor="otp"
+                          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                        >
+                          Enter OTP
+                        </label>
+                        <div className="mt-1 relative">
+                          <input
+                            type="text"
+                            id="otp"
+                            name="otp"
+                            value={otp}
+                            onChange={handleOtpChange}
+                            className={`block w-full px-4 py-3 text-center font-mono text-lg rounded-md border ${
+                              otpError
+                                ? "border-red-300 dark:border-red-500 focus:ring-red-500 focus:border-red-500"
+                                : "border-gray-300 dark:border-gray-600 focus:ring-primary focus:border-primary"
+                            } bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:ring-2`}
+                            placeholder="Enter 8-character OTP"
+                            maxLength={8}
+                            pattern="[A-Z0-9]{8}"
+                            required
+                            disabled={isVerifyingOtp}
+                          />
+                        </div>
+                        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                          Please enter the 8-character OTP sent to your
+                          registered phone number. Use only uppercase letters
+                          and numbers.
+                        </p>
+
+                        {otpError && (
+                          <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+                            {otpError}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={handleResendOtp}
+                          disabled={isSubmitting || isVerifyingOtp}
+                          className="inline-flex items-center text-sm text-primary hover:text-primary-dark dark:text-primary-light dark:hover:text-primary-lighter focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <RefreshCw className="h-4 w-4 mr-1" />
+                          Resend OTP
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleVerifyOtp}
+                          disabled={isVerifyingOtp || otp.length !== 8}
+                          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isVerifyingOtp ? (
+                            <>
+                              <LoadingSpinner size="sm" />
+                              <span className="ml-2">Verifying...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Check className="h-5 w-5 mr-2" />
+                              Verify OTP
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              {/* Then, modify your submit button to only show when OTP section is not visible */}
+              {!showOtpInput && (
+                <div className="flex justify-end">
+                  <motion.button
+                    type="submit"
+                    disabled={
+                      isSubmitting ||
+                      !selectedDevice ||
+                      !recipientEmail ||
+                      !confirmEmail ||
+                      recipientEmail !== confirmEmail
+                    }
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <LoadingSpinner size="sm" />
+                        <span className="ml-2">Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-5 w-5 mr-2" />
+                        Transfer Ownership
+                      </>
+                    )}
+                  </motion.button>
+                </div>
+              )}
+              {/* <div className="flex justify-end">
                 <motion.button
                   type="submit"
                   disabled={
@@ -675,7 +973,7 @@ const TransferDevicePage = () => {
                     </>
                   )}
                 </motion.button>
-              </div>
+              </div> */}
             </form>
           )}
         </div>

@@ -7,7 +7,7 @@ export interface Device {
   type: string;
   serialNumber: string;
   imei?: string;
-  status: "active" | "reported" | "missing" | "stolen";
+  status: string;
 }
 
 export const deviceApi = {
@@ -33,7 +33,11 @@ export const deviceApi = {
     location: string,
     description: string
   ) => {
-    console.log(`device id ${JSON.stringify(id)} status ${status} location ${location} description ${description}`);
+    console.log(
+      `device id ${JSON.stringify(
+        id
+      )} status ${status} location ${location} description ${description}`
+    );
     const response = await apiClient.put(
       `/device/updatestatus/${id.deviceId}`,
       {
@@ -46,10 +50,11 @@ export const deviceApi = {
   },
 
   searchDevice: async (query: string) => {
-
     // The query parameter should be passed as "qparams"
     // Check if query already has the qparams prefix
-    const formattedQuery = query.startsWith('qparams=') ? query : `qparams=${query}`;
+    const formattedQuery = query.startsWith("qparams=")
+      ? query
+      : `qparams=${query}`;
     const response = await apiClient.get(`/device/search?${formattedQuery}`);
     return response.data;
   },
@@ -58,6 +63,25 @@ export const deviceApi = {
     const response = await apiClient.put("/device/transferOwnership", {
       newuseremail: newUserEmail,
       deviceId,
+    });
+    return response.data;
+  },
+
+  transferDeviceOtp: async () => {
+    const response = await apiClient.get("/device/transferOtp");
+    return response.data;
+  },
+  resendDevicetransferOtp: async (registerationToken: string) => {
+    const response = await apiClient.post("/device/resendDevicetransferOtp", {
+      registerationToken,
+    });
+
+    return response.data;
+  },
+  verifyDeviceTransferOtp: async (otp: string, registrationToken: string) => {
+    const response = await apiClient.post("/device/verifyDeviceTransferOtp", {
+      otp,
+      registrationToken,
     });
     return response.data;
   },
