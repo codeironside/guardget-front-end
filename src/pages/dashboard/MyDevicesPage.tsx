@@ -9,16 +9,20 @@ import {
   Edit,
   Trash,
   AlertTriangle,
+  PauseCircle,
+  ArrowRightCircle,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { deviceApi } from "../../api/devices";
 import toast from "react-hot-toast";
+
+// Updated device type to match backend enum
 type Device = {
   id: string;
   name: string;
   model: string;
   Type: "phone" | "laptop";
-  status: "active" | "reported" | "missing";
+  status: "active" | "inactive" | "missing" | "stolen" | "transfer_pending";
   IMEI1?: string;
   SN: string;
   createdAt: string;
@@ -26,9 +30,9 @@ type Device = {
 
 const MyDevicesPage: React.FC = () => {
   const [devices, setDevices] = useState<Device[]>([]);
-  const [activeTab, setActiveTab] = useState<"all" | "reported" | "missing">(
-    "all"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "all" | "active" | "inactive" | "missing" | "stolen" | "transfer_pending"
+  >("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteModal, setDeleteModal] = useState<{
@@ -43,6 +47,7 @@ const MyDevicesPage: React.FC = () => {
   useEffect(() => {
     fetchDevices();
   }, []);
+
   const fetchDevices = async () => {
     try {
       const response = await deviceApi.getAll();
@@ -95,11 +100,11 @@ const MyDevicesPage: React.FC = () => {
             Active
           </span>
         );
-      case "reported":
+      case "inactive":
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-error bg-opacity-10 text-error">
-            <AlertCircle className="h-3 w-3 mr-1" />
-            Reported
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-200 bg-opacity-10 text-gray-600 dark:text-gray-400">
+            <PauseCircle className="h-3 w-3 mr-1" />
+            Inactive
           </span>
         );
       case "missing":
@@ -107,6 +112,20 @@ const MyDevicesPage: React.FC = () => {
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning bg-opacity-10 text-warning">
             <AlertTriangle className="h-3 w-3 mr-1" />
             Missing
+          </span>
+        );
+      case "stolen":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-error bg-opacity-10 text-error">
+            <AlertCircle className="h-3 w-3 mr-1" />
+            Stolen
+          </span>
+        );
+      case "transfer_pending":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 bg-opacity-10 text-blue-600">
+            <ArrowRightCircle className="h-3 w-3 mr-1" />
+            Transfer Pending
           </span>
         );
       default:
@@ -128,7 +147,7 @@ const MyDevicesPage: React.FC = () => {
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
         <div className="border-b border-gray-200 dark:border-gray-700">
-          <nav className="flex" aria-label="Tabs">
+          <nav className="flex flex-wrap" aria-label="Tabs">
             <button
               onClick={() => setActiveTab("all")}
               className={`px-4 py-4 text-sm font-medium ${
@@ -143,16 +162,29 @@ const MyDevicesPage: React.FC = () => {
               </span>
             </button>
             <button
-              onClick={() => setActiveTab("reported")}
+              onClick={() => setActiveTab("active")}
               className={`px-4 py-4 text-sm font-medium ${
-                activeTab === "reported"
+                activeTab === "active"
                   ? "border-b-2 border-primary text-primary"
                   : "text-gray-500 hover:text-primary"
               }`}
             >
-              Reported
+              Active
               <span className="ml-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs py-0.5 px-2 rounded-full">
-                {devices.filter((d) => d.status === "reported").length}
+                {devices.filter((d) => d.status === "active").length}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab("inactive")}
+              className={`px-4 py-4 text-sm font-medium ${
+                activeTab === "inactive"
+                  ? "border-b-2 border-primary text-primary"
+                  : "text-gray-500 hover:text-primary"
+              }`}
+            >
+              Inactive
+              <span className="ml-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs py-0.5 px-2 rounded-full">
+                {devices.filter((d) => d.status === "inactive").length}
               </span>
             </button>
             <button
@@ -166,6 +198,32 @@ const MyDevicesPage: React.FC = () => {
               Missing
               <span className="ml-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs py-0.5 px-2 rounded-full">
                 {devices.filter((d) => d.status === "missing").length}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab("stolen")}
+              className={`px-4 py-4 text-sm font-medium ${
+                activeTab === "stolen"
+                  ? "border-b-2 border-primary text-primary"
+                  : "text-gray-500 hover:text-primary"
+              }`}
+            >
+              Stolen
+              <span className="ml-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs py-0.5 px-2 rounded-full">
+                {devices.filter((d) => d.status === "stolen").length}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab("transfer_pending")}
+              className={`px-4 py-4 text-sm font-medium ${
+                activeTab === "transfer_pending"
+                  ? "border-b-2 border-primary text-primary"
+                  : "text-gray-500 hover:text-primary"
+              }`}
+            >
+              Transfer Pending
+              <span className="ml-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs py-0.5 px-2 rounded-full">
+                {devices.filter((d) => d.status === "transfer_pending").length}
               </span>
             </button>
           </nav>
@@ -193,7 +251,7 @@ const MyDevicesPage: React.FC = () => {
                   className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 flex items-start border border-gray-200 dark:border-gray-600"
                 >
                   <div className="bg-primary bg-opacity-10 p-3 rounded-lg mr-4">
-                    {device.type === "phone" ? (
+                    {device.Type === "phone" ? (
                       <Smartphone className="h-6 w-6 text-primary" />
                     ) : (
                       <Laptop className="h-6 w-6 text-primary" />
@@ -206,7 +264,7 @@ const MyDevicesPage: React.FC = () => {
                           {device.name}
                         </h3>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Model: {device.Type}
+                          Model: {device.model}
                         </p>
                       </div>
                       <div className="relative">

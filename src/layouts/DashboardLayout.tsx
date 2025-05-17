@@ -27,7 +27,6 @@ const DashboardLayout: React.FC = () => {
 
   // Calculate user initials when user data changes
   useEffect(() => {
-    console.log(`users initial ${JSON.stringify(user)}`)
     if (user) {
       let initials = "";
 
