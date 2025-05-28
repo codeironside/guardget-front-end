@@ -258,14 +258,14 @@ const DashboardLayout: React.FC = () => {
                   <div className="w-10 h-10 rounded-full overflow-hidden">
                     <img
                       src={user.imageurl}
-                      alt={`${user.firstName}'s profile`}
+                      alt={`${user.firstName || user.name || "User"}'s profile`}
                       className="w-full h-full object-cover"
                     />
                   </div>
                 ) : (
                   // Display initials if no image is available
                   <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold">
-                    {getUserInitials()}
+                    {userInitials}
                   </div>
                 )}
               </div>

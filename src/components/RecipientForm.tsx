@@ -30,9 +30,8 @@ const userService = {
   searchUsers: async (query: string) => {
     try {
       const response = await apiClient.get(
-        `http://localhost:3124/api/v1/users/search?query=${encodeURIComponent(
-          query
-        )}`
+        `
+https://api.guardget.com/api/v1/users/search?query=${encodeURIComponent(query)}`
       );
       return response.data;
     } catch (error) {
@@ -44,7 +43,7 @@ const userService = {
   getRecentContacts: async () => {
     try {
       const response = await apiClient.get(
-        "http://localhost:3124/api/v1/users/recent-contacts"
+        "https://api.guardget.com/api/v1/users/recent-contacts"
       );
       return response.data;
     } catch (error) {

@@ -99,8 +99,12 @@ export const authApi = {
     return response.data;
   },
 
-  forgotPassword: async (email: string) => {
-    const response = await apiClient.post("/forgetpassword", { email });
+  forgotPassword: async (phonenumber: string, password: string) => {
+    console.log(`request body ${JSON.stringify(password)}`);
+    const response = await apiClient.post("/users/forgetpassword", {
+      phonenumber,
+      password,
+    });
     return response.data;
   },
 
@@ -141,4 +145,11 @@ export const authApi = {
     const response = await apiClient.put("/users/change-password", data);
     return response.data;
   },
+  resetPasswordWithToken: async (storedToken: string, otp: string) => {
+    const response = await apiClient.post("/users/reset-password", {
+      token: storedToken,
+      otp:otp,
+    });
+    return response.data;
+  }
 };
