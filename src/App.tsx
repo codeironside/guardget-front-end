@@ -35,7 +35,8 @@ import DeviceStatusPage from './pages/dashboard/DeviceStatusPage';
 import SubscriptionsPage from './pages/dashboard/SubscriptionsPage';
 import ReceiptsPage from './pages/dashboard/ReceiptsPage';
 import ProfilePage from './pages/dashboard/ProfilePage';
-
+import PaymentSuccessPage from './pages/dashboard/PaymentSucesspage';
+import PaymentErrorPage from './pages/dashboard/PaymentErrorPage';
 // Admin Pages
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
@@ -86,6 +87,8 @@ function App() {
               <Route path="transfer-ownership" element={<TransferOwnershipPage />} />
               <Route path="device-status" element={<DeviceStatusPage />} />
               <Route path="subscriptions" element={<SubscriptionsPage />} />
+              <Route path="paymentsuccess" element={<PaymentSuccessPage />} />
+              <Route path="paymenterror" element={<PaymentErrorPage />} />
               <Route path="receipts" element={<ReceiptsPage />} />
               <Route path="profile" element={<ProfilePage />} />
             </Route>
