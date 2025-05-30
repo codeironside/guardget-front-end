@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guardget Social Preview</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .preview-container {
+            width: 1200px;
+            height: 630px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 50%, #1e40af 100%);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            border-radius: 0;
+        }
+
+        /* Animated background elements */
+        .bg-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.1;
+            background-image:
+                radial-gradient(circle at 25% 25%, #60a5fa 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, #34d399 0%, transparent 50%),
+                radial-gradient(circle at 75% 25%, #f472b6 0%, transparent 50%);
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0px) rotate(0deg);
+            }
+
+            50% {
+                transform: translateY(-20px) rotate(180deg);
+            }
+        }
+
+        .content {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0 80px;
+        }
+
+        .left-content {
+            flex: 1;
+            max-width: 600px;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #60a5fa, #3b82f6);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .brand-name {
+            font-size: 48px;
+            font-weight: 800;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .tagline {
+            font-size: 28px;
+            color: #e2e8f0;
+            font-weight: 600;
+            margin-bottom: 20px;
+            line-height: 1.3;
+        }
+
+        .description {
+            font-size: 18px;
+            color: #cbd5e1;
+            line-height: 1.5;
+            margin-bottom: 30px;
+        }
+
+        .features {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .feature {
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px 20px;
+            border-radius: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .feature-icon {
+            width: 24px;
+            height: 24px;
+            background: #34d399;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .feature-text {
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .right-content {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .device-mockup {
+            position: relative;
+            transform: perspective(1000px) rotateY(-15deg) rotateX(5deg);
+        }
+
+        .phone {
+            width: 200px;
+            height: 400px;
+            background: linear-gradient(145deg, #1f2937, #374151);
+            border-radius: 25px;
+            position: relative;
+            box-shadow:
+                0 25px 50px rgba(0, 0, 0, 0.4),
+                0 0 0 8px rgba(255, 255, 255, 0.1);
+            margin-right: 40px;
+        }
+
+        .phone-screen {
+            width: 170px;
+            height: 340px;
+            background: linear-gradient(145deg, #0f172a, #1e293b);
+            border-radius: 20px;
+            position: absolute;
+            top: 30px;
+            left: 15px;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .laptop {
+            width: 280px;
+            height: 180px;
+            background: linear-gradient(145deg, #374151, #4b5563);
+            border-radius: 12px;
+            position: relative;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            transform: translateY(-20px);
+        }
+
+        .laptop-screen {
+            width: 250px;
+            height: 140px;
+            background: linear-gradient(145deg, #0f172a, #1e293b);
+            border-radius: 8px;
+            position: absolute;
+            top: 10px;
+            left: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tracking-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 12px;
+            height: 12px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+
+        .shield-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px;
+            height: 80px;
+            background: rgba(59, 130, 246, 0.2);
+            border-radius: 50%;
+            border: 3px solid #3b82f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .website-url {
+            position: absolute;
+            bottom: 30px;
+            right: 80px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 16px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="preview-container">
+        <div class="bg-pattern"></div>
+
+        <div class="content">
+            <div class="left-content">
+                <div class="logo-section">
+                    <div class="logo">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="white">
+                            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
+                            <circle cx="12" cy="10" r="2.5" fill="#1e40af" />
+                            <rect x="10" y="13" width="4" height="2" rx="0.5" fill="#1e40af" />
+                        </svg>
+                    </div>
+                    <div class="brand-name">Guardget</div>
+                </div>
+
+                <div class="tagline">
+                    Advanced Device Tracking & Protection
+                </div>
+
+                <div class="description">
+                    Secure your valuable electronics with real-time tracking, theft alerts, and instant recovery
+                    assistance.
+                </div>
+
+                <div class="features">
+                    <div class="feature">
+                        <div class="feature-icon">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
+                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div class="feature-text">Real-time Tracking</div>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
+                                <path d="M15 17h5l-5 5v-5zM4 9h5L4 4v5zm11-5h5v5l-5-5z" />
+                            </svg>
+                        </div>
+                        <div class="feature-text">Instant Alerts</div>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            </svg>
+                        </div>
+                        <div class="feature-text">Secure Recovery</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-content">
+                <div class="device-mockup">
+                    <div class="phone">
+                        <div class="phone-screen">
+                            <div class="tracking-indicator"></div>
+                            <div style="color: #60a5fa; font-size: 12px; font-weight: 600; margin-bottom: 10px;">
+                                🛡️ PROTECTED DEVICES
+                            </div>
+                            <div
+                                style="background: rgba(16, 185, 129, 0.2); padding: 8px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid #10b981;">
+                                <div style="color: white; font-size: 10px; font-weight: 600;">iPhone 15 Pro</div>
+                                <div style="color: #94a3b8; font-size: 8px;">📍 Last seen: Home</div>
+                            </div>
+                            <div
+                                style="background: rgba(59, 130, 246, 0.2); padding: 8px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid #3b82f6;">
+                                <div style="color: white; font-size: 10px; font-weight: 600;">MacBook Pro</div>
+                                <div style="color: #94a3b8; font-size: 8px;">📍 Last seen: Office</div>
+                            </div>
+                            <div
+                                style="background: rgba(245, 158, 11, 0.2); padding: 8px; border-radius: 8px; border-left: 3px solid #f59e0b;">
+                                <div style="color: white; font-size: 10px; font-weight: 600;">iPad Air</div>
+                                <div style="color: #94a3b8; font-size: 8px;">⚠️ Movement detected</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="laptop">
+                        <div class="laptop-screen">
+                            <div class="shield-overlay">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="#3b82f6">
+                                    <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="website-url">guardget.com</div>
+    </div>
+</body>
+
+</html>

@@ -291,7 +291,7 @@ const MyDevicesPage: React.FC = () => {
                     </div>
                     <div className="mt-3 flex items-center justify-between">
                       {getStatusBadge(device.status)}
-                      <div className="flex space-x-2">
+                      {/* <div className="flex space-x-2">
                         <button className="p-1 text-gray-500 hover:text-primary transition-colors">
                           <Edit className="h-4 w-4" />
                         </button>
@@ -301,7 +301,7 @@ const MyDevicesPage: React.FC = () => {
                         >
                           <Trash className="h-4 w-4" />
                         </button>
-                      </div>
+                      </div> */}
                     </div>
                   </div>
                 </motion.div>
