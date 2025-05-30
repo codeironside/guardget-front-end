@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <defs>
+    <!-- Gradient for modern look -->
+    <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1d4ed8;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Dark mode gradient -->
+    <linearGradient id="shieldGradientDark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#60a5fa;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle for better visibility -->
+  <circle cx="12" cy="12" r="11" fill="white" stroke="#e5e7eb" stroke-width="0.5" opacity="0.9"/>
+  
+  <!-- Main shield shape -->
+  <path d="M12 2L4 6v5c0 4.5 3.1 8.7 7.3 9.7.3.1.6.1.9.1s.6 0 .9-.1C17.9 19.7 21 15.5 21 11V6l-8-4z" 
+        fill="url(#shieldGradient)" 
+        stroke="white" 
+        stroke-width="0.5"/>
+  
+  <!-- Device icon inside shield -->
+  <rect x="9.5" y="8" width="5" height="7" rx="0.5" fill="white" opacity="0.9"/>
+  <rect x="10" y="8.5" width="4" height="5" rx="0.2" fill="url(#shieldGradient)"/>
+  <circle cx="12" cy="14.2" r="0.4" fill="white"/>
+  
+  <!-- Signal/tracking indicator -->
+  <g opacity="0.8">
+    <circle cx="15" cy="7.5" r="0.8" fill="white"/>
+    <circle cx="15" cy="7.5" r="1.5" fill="none" stroke="white" stroke-width="0.3" opacity="0.6"/>
+    <circle cx="15" cy="7.5" r="2.2" fill="none" stroke="white" stroke-width="0.3" opacity="0.4"/>
+  </g>
+  
+  <!-- CSS for theme adaptation -->
+  <style>
+    @media (prefers-color-scheme: dark) {
+      path { fill: url(#shieldGradientDark) !important; }
+      circle:first-child { fill: #1f2937 !important; stroke: #374151 !important; }
+    }
+  </style>
+</svg>
