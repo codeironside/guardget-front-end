@@ -110,17 +110,7 @@ const LoginPage: React.FC = () => {
             </div>
 
             <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  Remember me
-                </label>
-              </div>
+
 
               <div className="text-sm">
                 <Link to="/forgot-password" className="font-medium text-primary hover:text-primary-dark transition-colors">

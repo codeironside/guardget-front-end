@@ -17,6 +17,8 @@ import PricingPage from './pages/public/PricingPage';
 import AboutPage from './pages/public/AboutPage';
 import ContactPage from './pages/public/ContactPage';
 import DeviceCheckerPage from './pages/public/DeviceCheckerPage';
+import PrivacyPage from './pages/public/PrivacyPage';
+import TermsPage from './pages/public/TermsPage';
 
 // Auth Pages
 import LoginPage from './pages/auth/LoginPage';
@@ -58,6 +60,8 @@ function App() {
               <Route path="services" element={<ServicesPage />} />
               <Route path="faq" element={<FaqPage />} />
               <Route path="pricing" element={<PricingPage />} />
+              <Route path="privacy" element={<PrivacyPage />} />
+              <Route path="terms" element={<TermsPage />} />
               <Route path="about" element={<AboutPage />} />
               <Route path="contact" element={<ContactPage />} />
               <Route path="device-checker" element={<DeviceCheckerPage />} />
