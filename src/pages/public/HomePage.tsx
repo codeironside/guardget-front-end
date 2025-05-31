@@ -80,7 +80,7 @@ const HomePage: React.FC = () => {
             Guardget. Miss-Call, Not Miss-Phone.
           </h1>
           <p className="text-xl md:text-2xl text-gray-200 mb-8 max-w-3xl mx-auto">
-            The ultimate device protection service that helps you track, recover, and protect your valuable electronics.
+            The ultimate device protection service that helps you track, recover, and protect your valuable electronics. Find your lost device from anywhere with ease, Sign up with Guardget to guard your devices like a knight in shining armor.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link 
