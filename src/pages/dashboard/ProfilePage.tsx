@@ -442,13 +442,13 @@ const ProfilePage = () => {
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
                   Security Settings
                 </h2>
-                <button
+                {/* <button
                   onClick={() => setShowPasswordModal(true)}
                   className="flex items-center px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                 >
                   <Lock className="w-4 h-4 mr-2" />
                   Change Password
-                </button>
+                </button> */}
               </div>
             </div>
           </div>
