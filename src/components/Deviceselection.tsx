@@ -12,7 +12,7 @@ interface DeviceProps {
   serialNumber?: string;
   SN?: string;
   imei?: string;
-  IMEI?: string;
+  IMEI1?: string;
   IMEI2?: string;
   status: "active" | "reported" | "missing" | "stolen";
   user?: {
@@ -74,7 +74,7 @@ const DeviceSelection: React.FC<DeviceSelectionProps> = ({
   const getDeviceIdentifier = (device: DeviceProps) => {
     const type = device.Type?.toLowerCase() || device.type?.toLowerCase() || "";
     if (type.includes("phone") || type.includes("smartphone")) {
-      return `IMEI: ${device.IMEI || device.IMEI2 || device.imei || "N/A"}`;
+      return `IMEI: ${device.IMIE1 || device.IMEI2 || device.imei || "N/A"}`;
     } else {
       return `S/N: ${device.SN || device.serialNumber || "N/A"}`;
     }
