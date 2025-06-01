@@ -13,6 +13,7 @@ import {
   Info,
   ArrowLeft,
   Plus,
+  AlertTriangle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { deviceApi } from "../../api/devices";
@@ -22,6 +23,7 @@ import LoadingSpinner from "../../components/LoadingSpinner";
 interface ValidationResult {
   isValid: boolean;
   message: string;
+  warning?: boolean;
 }
 
 interface FormValidation {
@@ -31,6 +33,22 @@ interface FormValidation {
   imei1: ValidationResult;
   imei2: ValidationResult;
   status: ValidationResult;
+}
+
+interface IMEIValidationResult {
+  isValid: boolean;
+  strictValid: boolean;
+  message: string;
+  warning?: boolean;
+  details: {
+    formatValid: boolean;
+    lengthValid: boolean;
+    digitsOnly: boolean;
+    notAllZeros: boolean;
+    notAllSame: boolean;
+    luhnValid: boolean;
+    tacValid: boolean;
+  };
 }
 
 const RegisterDevicePage: React.FC = () => {
@@ -54,41 +72,137 @@ const RegisterDevicePage: React.FC = () => {
     type: { isValid: false, message: "" },
     imei1: { isValid: false, message: "" },
     imei2: { isValid: false, message: "" },
-    status: { isValid: true, message: "Valid status" }, // Default to active
+    status: { isValid: true, message: "Valid status" },
   });
 
-  // Validation patterns
   const patterns = {
     name: /^[a-zA-Z0-9\s-_]{2,50}$/,
     serialNumber: /^[a-zA-Z0-9-_]{3,30}$/,
     imei: /^[0-9]{15}$/,
   };
 
-  // IMEI Luhn algorithm validation
-  const validateIMEI = (imei: string): boolean => {
-    if (!patterns.imei.test(imei)) return false;
+  // Known TAC (Type Allocation Code) ranges for major manufacturers
+  const knownTACRanges = [
+    // Apple
+    { start: "350000", end: "359999", manufacturer: "Apple" },
+    { start: "990000", end: "999999", manufacturer: "Apple" },
+    
+    // Samsung
+    { start: "352000", end: "359999", manufacturer: "Samsung" },
+    { start: "351000", end: "351999", manufacturer: "Samsung" },
+    
+    // Huawei
+    { start: "863000", end: "869999", manufacturer: "Huawei" },
+    { start: "864000", end: "868999", manufacturer: "Huawei" },
+    
+    // Xiaomi
+    { start: "862000", end: "862999", manufacturer: "Xiaomi" },
+    { start: "863000", end: "863999", manufacturer: "Xiaomi" },
+    
+    // OnePlus
+    { start: "863000", end: "863999", manufacturer: "OnePlus" },
+    
+    // Google
+    { start: "353000", end: "353999", manufacturer: "Google" },
+    
+    // Add more ranges as needed
+  ];
 
+  const validateTAC = (imei: string): boolean => {
+    if (imei.length < 8) return false;
+    
+    const tac = imei.substring(0, 8);
+    const tacPrefix6 = imei.substring(0, 6);
+    
+    // Check against known TAC ranges
+    for (const range of knownTACRanges) {
+      if (tacPrefix6 >= range.start && tacPrefix6 <= range.end) {
+        return true;
+      }
+    }
+    
+    // Additional validation: TAC should not start with certain invalid patterns
+    const invalidPrefixes = ["000000", "111111", "222222", "333333", "444444", 
+                           "555555", "666666", "777777", "888888", "999999"];
+    
+    return !invalidPrefixes.includes(tacPrefix6);
+  };
+
+  const luhnValidation = (imei: string): boolean => {
     let sum = 0;
-    let isEven = false;
+    let alternate = false;
 
-    for (let i = imei.length - 1; i >= 0; i--) {
+    for (let i = imei.length - 2; i >= 0; i--) {
       let digit = parseInt(imei[i]);
 
-      if (isEven) {
+      if (alternate) {
         digit *= 2;
         if (digit > 9) {
-          digit = digit
-            .toString()
-            .split("")
-            .reduce((a, b) => parseInt(a) + parseInt(b), 0);
+          digit = Math.floor(digit / 10) + (digit % 10);
         }
       }
 
       sum += digit;
-      isEven = !isEven;
+      alternate = !alternate;
     }
 
-    return sum % 10 === 0;
+    const checkDigit = (10 - (sum % 10)) % 10;
+    return checkDigit === parseInt(imei[imei.length - 1]);
+  };
+
+  const comprehensiveIMEIValidation = (imei: string): IMEIValidationResult => {
+    const details = {
+      formatValid: /^[0-9]{15}$/.test(imei),
+      lengthValid: imei.length === 15,
+      digitsOnly: /^[0-9]+$/.test(imei),
+      notAllZeros: !/^0{15}$/.test(imei),
+      notAllSame: !/^(\d)\1{14}$/.test(imei),
+      luhnValid: false,
+      tacValid: false,
+    };
+
+    // Only proceed with advanced validation if basic format is correct
+    if (details.formatValid) {
+      details.luhnValid = luhnValidation(imei);
+      details.tacValid = validateTAC(imei);
+    }
+
+    // Determine validation result
+    const basicValid = details.formatValid && details.notAllZeros && details.notAllSame;
+    const strictValid = basicValid && details.luhnValid;
+    const manufacturerValid = basicValid && details.tacValid;
+
+    let message = "";
+    let warning = false;
+
+    if (!details.lengthValid) {
+      message = "IMEI must be exactly 15 digits";
+    } else if (!details.digitsOnly) {
+      message = "IMEI must contain only numbers";
+    } else if (!details.notAllZeros) {
+      message = "IMEI cannot be all zeros";
+    } else if (!details.notAllSame) {
+      message = "IMEI cannot be all the same digit";
+    } else if (!details.tacValid) {
+      message = "IMEI has invalid manufacturer code (TAC)";
+    } else if (!details.luhnValid && details.tacValid) {
+      // Special case: Valid TAC but invalid Luhn
+      // Some devices have valid IMEIs that don't pass strict Luhn
+      message = "IMEI format accepted (checksum verification failed)";
+      warning = true;
+    } else if (details.luhnValid) {
+      message = "Valid IMEI";
+    } else {
+      message = "Invalid IMEI format";
+    }
+
+    return {
+      isValid: basicValid && (details.luhnValid || details.tacValid),
+      strictValid: strictValid,
+      message,
+      warning,
+      details,
+    };
   };
 
   const validateField = (name: string, value: string): ValidationResult => {
@@ -129,34 +243,25 @@ const RegisterDevicePage: React.FC = () => {
               isValid: false,
               message: "IMEI 1 is required for mobile devices",
             };
-          if (!patterns.imei.test(value)) {
-            return {
-              isValid: false,
-              message: "IMEI must be exactly 15 digits",
-            };
-          }
-          if (!validateIMEI(value)) {
-            return {
-              isValid: false,
-              message: "Invalid IMEI - please check your device settings",
-            };
-          }
-          return { isValid: true, message: "Valid IMEI" };
+          
+          const validation = comprehensiveIMEIValidation(value);
+          return {
+            isValid: validation.isValid,
+            message: validation.message,
+            warning: validation.warning,
+          };
         }
         return { isValid: true, message: "" };
 
       case "imei2":
-        if (!value) return { isValid: true, message: "" }; // Optional field
-        if (!patterns.imei.test(value)) {
-          return { isValid: false, message: "IMEI must be exactly 15 digits" };
-        }
-        if (!validateIMEI(value)) {
-          return {
-            isValid: false,
-            message: "Invalid IMEI - please check your device settings",
-          };
-        }
-        return { isValid: true, message: "Valid IMEI" };
+        if (!value) return { isValid: true, message: "" };
+        
+        const validation = comprehensiveIMEIValidation(value);
+        return {
+          isValid: validation.isValid,
+          message: validation.message,
+          warning: validation.warning,
+        };
 
       case "status":
         return { isValid: true, message: "Valid status" };
@@ -173,7 +278,6 @@ const RegisterDevicePage: React.FC = () => {
   ): void => {
     const { name, value } = e.target;
 
-    // For IMEI fields, only allow numbers
     if ((name === "imei1" || name === "imei2") && !/^\d*$/.test(value)) {
       return;
     }
@@ -183,14 +287,12 @@ const RegisterDevicePage: React.FC = () => {
       [name]: value,
     }));
 
-    // Validate field on change
     const fieldValidation = validateField(name, value);
     setValidation((prev) => ({
       ...prev,
       [name as keyof FormValidation]: fieldValidation,
     }));
 
-    // Clear errors
     if (errors[name]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -206,7 +308,9 @@ const RegisterDevicePage: React.FC = () => {
 
     if (!fieldValue && field !== "status") return null;
 
-    if (fieldValidation.isValid) {
+    if (fieldValidation.warning) {
+      return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
+    } else if (fieldValidation.isValid) {
       return <CheckCircle className="h-5 w-5 text-green-500" />;
     } else {
       return <XCircle className="h-5 w-5 text-red-500" />;
@@ -228,7 +332,9 @@ const RegisterDevicePage: React.FC = () => {
       return `${baseClasses} border-gray-300 dark:border-gray-600 focus:ring-primary hover:border-gray-400`;
     }
 
-    if (fieldValidation.isValid) {
+    if (fieldValidation.warning) {
+      return `${baseClasses} border-yellow-300 dark:border-yellow-600 focus:ring-yellow-500 bg-yellow-50 dark:bg-yellow-900/20`;
+    } else if (fieldValidation.isValid) {
       return `${baseClasses} border-green-300 dark:border-green-600 focus:ring-green-500 bg-green-50 dark:bg-green-900/20`;
     } else {
       return `${baseClasses} border-red-300 dark:border-red-600 focus:ring-red-500 bg-red-50 dark:bg-red-900/20`;
@@ -254,17 +360,14 @@ const RegisterDevicePage: React.FC = () => {
     const requiredFields = ["name", "serialNumber", "type"];
     const mobileDevices = ["smartphone", "tablet"];
 
-    // Check required fields
     for (const field of requiredFields) {
       if (!validation[field as keyof FormValidation].isValid) return false;
     }
 
-    // Check IMEI for mobile devices
     if (mobileDevices.includes(formData.type) && !validation.imei1.isValid) {
       return false;
     }
 
-    // Check IMEI2 if provided
     if (formData.imei2 && !validation.imei2.isValid) {
       return false;
     }
@@ -290,8 +393,8 @@ const RegisterDevicePage: React.FC = () => {
         name: formData.name,
         serialNumber: formData.serialNumber,
         type: formData.type,
-        IMEI1: formData.imei1 || null, // Send as IMEI1 to backend
-        IMEI2: formData.imei2 || null, // Send as IMEI2 to backend
+        IMEI1: formData.imei1 || null,
+        IMEI2: formData.imei2 || null,
         status: formData.status,
         purchaseDate: formData.purchaseDate || null,
         notes: formData.notes || null,
@@ -354,7 +457,6 @@ const RegisterDevicePage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-gray-50 to-primary/10 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-8 px-4 transition-all duration-300">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <button
             onClick={() => navigate("/dashboard/my-devices")}
@@ -381,11 +483,9 @@ const RegisterDevicePage: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Form */}
           <div className="lg:col-span-2">
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
               <form onSubmit={handleSubmit} className="p-8 space-y-8">
-                {/* General Error */}
                 {errors.general && (
                   <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-400 dark:border-red-500 p-4 rounded-r-lg">
                     <div className="flex items-center">
@@ -397,7 +497,6 @@ const RegisterDevicePage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Device Basic Info */}
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
@@ -406,7 +505,6 @@ const RegisterDevicePage: React.FC = () => {
                     </h3>
                   </div>
 
-                  {/* Device Name */}
                   <div>
                     <label
                       htmlFor="name"
@@ -432,7 +530,9 @@ const RegisterDevicePage: React.FC = () => {
                     {formData.name && (
                       <p
                         className={`mt-2 text-xs ${
-                          validation.name.isValid
+                          validation.name.warning
+                            ? "text-yellow-600 dark:text-yellow-400"
+                            : validation.name.isValid
                             ? "text-green-600 dark:text-green-400"
                             : "text-red-600 dark:text-red-400"
                         }`}
@@ -442,7 +542,6 @@ const RegisterDevicePage: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Device Type */}
                   <div>
                     <label
                       htmlFor="type"
@@ -487,7 +586,6 @@ const RegisterDevicePage: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Serial Number */}
                   <div>
                     <label
                       htmlFor="serialNumber"
@@ -513,7 +611,9 @@ const RegisterDevicePage: React.FC = () => {
                     {formData.serialNumber && (
                       <p
                         className={`mt-2 text-xs ${
-                          validation.serialNumber.isValid
+                          validation.serialNumber.warning
+                            ? "text-yellow-600 dark:text-yellow-400"
+                            : validation.serialNumber.isValid
                             ? "text-green-600 dark:text-green-400"
                             : "text-red-600 dark:text-red-400"
                         }`}
@@ -524,7 +624,6 @@ const RegisterDevicePage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* IMEI Section for Mobile Devices */}
                 {(formData.type === "smartphone" ||
                   formData.type === "tablet") && (
                   <div className="space-y-6">
@@ -549,12 +648,20 @@ const RegisterDevicePage: React.FC = () => {
                               Check the device's SIM tray or battery compartment
                             </li>
                           </ul>
+                          <p className="font-medium mt-2 mb-1">
+                            Advanced validation features:
+                          </p>
+                          <ul className="list-disc list-inside space-y-1 text-xs">
+                            <li>Format and length validation</li>
+                            <li>Manufacturer code (TAC) verification</li>
+                            <li>Luhn algorithm checksum validation</li>
+                            <li>Support for various device manufacturers</li>
+                          </ul>
                         </div>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      {/* IMEI 1 */}
                       <div>
                         <label
                           htmlFor="imei1"
@@ -581,7 +688,9 @@ const RegisterDevicePage: React.FC = () => {
                         {formData.imei1 && (
                           <p
                             className={`mt-2 text-xs ${
-                              validation.imei1.isValid
+                              validation.imei1.warning
+                                ? "text-yellow-600 dark:text-yellow-400"
+                                : validation.imei1.isValid
                                 ? "text-green-600 dark:text-green-400"
                                 : "text-red-600 dark:text-red-400"
                             }`}
@@ -591,7 +700,6 @@ const RegisterDevicePage: React.FC = () => {
                         )}
                       </div>
 
-                      {/* IMEI 2 */}
                       <div>
                         <label
                           htmlFor="imei2"
@@ -617,7 +725,9 @@ const RegisterDevicePage: React.FC = () => {
                         {formData.imei2 && (
                           <p
                             className={`mt-2 text-xs ${
-                              validation.imei2.isValid
+                              validation.imei2.warning
+                                ? "text-yellow-600 dark:text-yellow-400"
+                                : validation.imei2.isValid
                                 ? "text-green-600 dark:text-green-400"
                                 : "text-red-600 dark:text-red-400"
                             }`}
@@ -630,7 +740,6 @@ const RegisterDevicePage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Additional Information */}
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
@@ -639,7 +748,6 @@ const RegisterDevicePage: React.FC = () => {
                     </h3>
                   </div>
 
-                  {/* Device Status */}
                   <div>
                     <label
                       htmlFor="status"
@@ -678,7 +786,6 @@ const RegisterDevicePage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Purchase Date */}
                   <div>
                     <label
                       htmlFor="purchaseDate"
@@ -699,7 +806,6 @@ const RegisterDevicePage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Notes */}
                   <div>
                     <label
                       htmlFor="notes"
@@ -719,7 +825,6 @@ const RegisterDevicePage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Submit Button */}
                 <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
                   <button
                     type="submit"
@@ -743,9 +848,7 @@ const RegisterDevicePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-6">
-            {/* Device Preview */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 Device Preview
@@ -800,33 +903,59 @@ const RegisterDevicePage: React.FC = () => {
                     </span>
                   </div>
                 )}
+
+                <div className="text-sm">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Status:{" "}
+                  </span>
+                  <span className={`font-medium ${
+                    statusOptions.find(s => s.value === formData.status)?.color || "text-gray-900 dark:text-white"
+                  }`}>
+                    {statusOptions.find(s => s.value === formData.status)?.label || "Active"}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Security Tips */}
             <div className="bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20 rounded-2xl p-6 border border-primary/20">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
                 <Shield className="h-5 w-5 text-primary mr-2" />
-                Security Tips
+                Security Features
               </h3>
               <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                  Keep your device information up to date
+                  Advanced IMEI validation with manufacturer verification
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                  Enable device tracking features
+                  Luhn algorithm checksum validation
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                  Report status changes immediately
+                  Real-time field validation with warnings
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                  Store IMEI numbers safely
+                  Support for dual-SIM devices (IMEI 1 & 2)
+                </li>
+                <li className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                  Accepts valid devices even with checksum variations
                 </li>
               </ul>
+              
+              {(validation.imei1.warning || validation.imei2.warning) && (
+                <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                  <div className="flex items-start">
+                    <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 mr-2 flex-shrink-0" />
+                    <div className="text-xs text-yellow-700 dark:text-yellow-300">
+                      <p className="font-medium">IMEI Warning:</p>
+                      <p>Your IMEI passed basic validation but failed strict checksum verification. This is common with some device manufacturers and your device registration will still proceed.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

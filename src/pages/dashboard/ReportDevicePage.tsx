@@ -25,7 +25,7 @@ interface Device {
   type?: string;
   Type?: string;
   status: DeviceStatus;
-  SN: string;
+  serialNumber: string;
   IMEI1?: string;
   IMEI2?: string;
   user?: User;
@@ -211,7 +211,7 @@ const ReportDevicePage = () => {
                         Serial Number:
                       </span>
                       <span className="text-sm text-gray-800 dark:text-gray-200">
-                        {selectedDeviceDetails.SN}
+                        {selectedDeviceDetails.serialNumber}
                       </span>
                     </div>
 

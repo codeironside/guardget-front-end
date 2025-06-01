@@ -46,6 +46,7 @@ import AdminReceiptsPage from './pages/admin/AdminReceiptsPage';
 import AdminProfilePage from './pages/admin/AdminProfilePage';
 import AdminTransfersPage from './pages/admin/AdminTransfersPage';
 import AdminReportDevicePage from './pages/admin/AdminReportDevicePage';
+import AdminDeviceStatusPage from './pages/admin/AdminDeviceStatusPage';
 
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
@@ -114,6 +115,7 @@ function App() {
               <Route path="users" element={<AdminUsersPage />} />
               <Route path="devices" element={<AdminDevicesPage />} />
               <Route path="report-device" element={<AdminReportDevicePage />} />
+              <Route path="device-status" element={<AdminDeviceStatusPage />} />
               <Route path="transfers" element={<AdminTransfersPage />} />
               <Route
                 path="subscriptions"

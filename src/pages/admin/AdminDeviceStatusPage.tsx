@@ -566,8 +566,7 @@ const DeviceStatusPage = () => {
                               <p className="text-gray-600 dark:text-gray-400 text-sm">
                                 {result.user.email || "No contact information"}
                               </p>
-                              <p className="text-gray-600 dark:text-gray-400 text-sm">
-                                +234
+                              <p className="text-gray-600 dark:text-gray-400 text-sm">+234
                                 {result.user.phoneNumber ||
                                   "No contact information"}
                               </p>

@@ -14,6 +14,7 @@ import {
   Sun,
   Moon,
   Send,
+  Search
 } from "lucide-react";
 import { useTheme } from "../contexts/ThemeContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -46,6 +47,11 @@ const AdminLayout: React.FC = () => {
       label: "Report",
       icon: <AlertTriangle size={20} />,
       path: "/admin/report-device",
+    },
+    {
+      label: "Device Status",
+      icon: <Search size={20} />,
+      path: "/admin/device-status",
     },
     { label: "Transfers", icon: <Send size={20} />, path: "/admin/transfers" },
     {
