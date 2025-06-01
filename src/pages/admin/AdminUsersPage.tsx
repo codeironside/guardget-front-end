@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   User,
   Search,
@@ -9,10 +9,17 @@ import {
   AlertCircle,
   X,
   Loader,
+  UserX,
+  UserCheck,
+  Shield,
+  ShieldOff,
+  CheckCircle,
+  XCircle,
+  Eye,
+  MoreVertical,
 } from "lucide-react";
 import { adminApi } from "../../api/admin";
 import LoadingSpinner from "../../components/LoadingSpinner";
-import { format } from "date-fns";
 import toast from "react-hot-toast";
 
 interface AdminUser {
@@ -21,18 +28,20 @@ interface AdminUser {
   firstName: string;
   middleName: string | null;
   surName: string;
-  role: string;
+  role?: string;
   country: string;
   stateOfOrigin: string;
   phoneNumber: string;
   email: string;
   emailVerified: boolean;
   subActive: boolean;
+  Deactivated?: boolean; // User account deactivation status
   createdAt: string;
   updatedAt: string;
   devicesCount: number;
   subActiveTill: string | null;
   subscriptionStatus: string;
+  imageurl?: string;
 }
 
 interface CreateAdminFormData {
@@ -50,6 +59,12 @@ interface CreateAdminFormData {
   keyholder: string;
 }
 
+interface StatusChangeModal {
+  isOpen: boolean;
+  user: AdminUser | null;
+  action: "activate" | "deactivate" | null;
+}
+
 const AdminUsersPage = () => {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,9 +73,16 @@ const AdminUsersPage = () => {
   const [filters, setFilters] = useState({
     role: "",
     subscriptionStatus: "",
+    accountStatus: "",
   });
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [statusModal, setStatusModal] = useState<StatusChangeModal>({
+    isOpen: false,
+    user: null,
+    action: null,
+  });
+  const [isChangingStatus, setIsChangingStatus] = useState(false);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -74,7 +96,7 @@ const AdminUsersPage = () => {
     surName: "",
     email: "",
     phoneNumber: "",
-    country: "Nigeria", // Default value
+    country: "Nigeria",
     stateOfOrigin: "",
     address: "",
     password: "",
@@ -84,7 +106,15 @@ const AdminUsersPage = () => {
   const [formErrors, setFormErrors] = useState<
     Partial<Record<keyof CreateAdminFormData, string>>
   >({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Helper function to format dates
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
 
   useEffect(() => {
     fetchUsers();
@@ -102,10 +132,16 @@ const AdminUsersPage = () => {
 
       if (response.status === "success") {
         setUsers(response.data);
-        setPagination(response.pagination);
+        setPagination((prev) => ({
+          ...prev,
+          total: response.pagination.total,
+          page: response.pagination.page,
+          totalPages: response.pagination.totalPages,
+        }));
       }
     } catch (error: any) {
       setError(error.message);
+      toast.error(error.message || "Failed to fetch users");
     } finally {
       setLoading(false);
     }
@@ -119,6 +155,56 @@ const AdminUsersPage = () => {
     setSelectedUser(user);
   };
 
+  const handleStatusChange = (
+    user: AdminUser,
+    action: "activate" | "deactivate"
+  ) => {
+    setStatusModal({
+      isOpen: true,
+      user,
+      action,
+    });
+  };
+
+  const confirmStatusChange = async () => {
+    if (!statusModal.user || !statusModal.action) return;
+
+    setIsChangingStatus(true);
+
+    try {
+      const newStatus = statusModal.action === "deactivate"; // true for deactivate, false for activate
+      const response = await adminApi.deactivateUser(
+        statusModal.user._id,
+        newStatus
+      );
+
+      if (response.status === "success") {
+        // Update the user in the local state
+        setUsers((prevUsers) =>
+          prevUsers.map((user) =>
+            user._id === statusModal.user!._id
+              ? { ...user, Deactivated: newStatus }
+              : user
+          )
+        );
+
+        toast.success(
+          `User ${
+            statusModal.action === "activate" ? "activated" : "deactivated"
+          } successfully`
+        );
+
+        setStatusModal({ isOpen: false, user: null, action: null });
+      } else {
+        toast.error(response.message || `Failed to ${statusModal.action} user`);
+      }
+    } catch (error: any) {
+      toast.error(error.message || `Failed to ${statusModal.action} user`);
+    } finally {
+      setIsChangingStatus(false);
+    }
+  };
+
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -127,7 +213,6 @@ const AdminUsersPage = () => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
-    // Clear error when user types
     if (formErrors[name as keyof CreateAdminFormData]) {
       setFormErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -198,7 +283,6 @@ const AdminUsersPage = () => {
         toast.success("Admin created successfully");
         setShowCreateModal(false);
 
-        // Reset form data
         setFormData({
           username: "",
           firstName: "",
@@ -214,7 +298,6 @@ const AdminUsersPage = () => {
           keyholder: "",
         });
 
-        // Refresh users list
         fetchUsers();
       } else {
         toast.error(response.message || "Failed to create admin");
@@ -227,15 +310,45 @@ const AdminUsersPage = () => {
     }
   };
 
-  const filteredUsers = users.filter((user) => {
-    if (!searchTerm) return true;
-    const searchLower = searchTerm.toLowerCase();
+  const getUserStatusBadge = (user: AdminUser) => {
+    // User is deactivated if Deactivated field is true
+    const isDeactivated = user.Deactivated === true;
+
+    if (isDeactivated) {
+      return (
+        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-error bg-opacity-10 text-error">
+          <XCircle className="h-3 w-3 mr-1" />
+          Deactivated
+        </span>
+      );
+    }
+
     return (
-      user.username.toLowerCase().includes(searchLower) ||
-      user.email.toLowerCase().includes(searchLower) ||
-      user.firstName.toLowerCase().includes(searchLower) ||
-      user.surName.toLowerCase().includes(searchLower)
+      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-success bg-opacity-10 text-success">
+        <CheckCircle className="h-3 w-3 mr-1" />
+        Active
+      </span>
     );
+  };
+
+  const filteredUsers = users.filter((user) => {
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch =
+        user.username.toLowerCase().includes(searchLower) ||
+        user.email.toLowerCase().includes(searchLower) ||
+        user.firstName.toLowerCase().includes(searchLower) ||
+        user.surName.toLowerCase().includes(searchLower);
+      if (!matchesSearch) return false;
+    }
+
+    if (filters.accountStatus) {
+      const isDeactivated = user.Deactivated === true;
+      if (filters.accountStatus === "active" && isDeactivated) return false;
+      if (filters.accountStatus === "inactive" && !isDeactivated) return false;
+    }
+
+    return true;
   });
 
   return (
@@ -243,7 +356,7 @@ const AdminUsersPage = () => {
       <div className="mb-8">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            <h1 className="text-2xl font-heading font-bold text-secondary dark:text-white mb-2">
               User Management
             </h1>
             <p className="text-gray-600 dark:text-gray-300">
@@ -252,7 +365,7 @@ const AdminUsersPage = () => {
           </div>
           <button
             onClick={handleCreateAdmin}
-            className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary-dark transition-colors flex items-center"
+            className="btn btn-primary flex items-center"
           >
             <UserPlus className="h-5 w-5 mr-2" />
             Create Admin
@@ -269,7 +382,7 @@ const AdminUsersPage = () => {
                 placeholder="Search users..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="input-field pl-10"
               />
             </div>
           </div>
@@ -280,7 +393,7 @@ const AdminUsersPage = () => {
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, role: e.target.value }))
               }
-              className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="input-field"
             >
               <option value="">All Roles</option>
               <option value="user">Users</option>
@@ -295,25 +408,40 @@ const AdminUsersPage = () => {
                   subscriptionStatus: e.target.value,
                 }))
               }
-              className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="input-field"
             >
               <option value="">All Subscriptions</option>
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
+            </select>
+
+            <select
+              value={filters.accountStatus}
+              onChange={(e) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  accountStatus: e.target.value,
+                }))
+              }
+              className="input-field"
+            >
+              <option value="">All Accounts</option>
+              <option value="active">Active Accounts</option>
+              <option value="inactive">Deactivated Accounts</option>
             </select>
           </div>
         </div>
       </div>
 
       {error && (
-        <div className="mb-6 bg-error bg-opacity-10 text-error p-4 rounded-md flex items-center">
+        <div className="mb-6 bg-error bg-opacity-10 text-error p-4 rounded-lg flex items-center">
           <AlertCircle className="h-5 w-5 mr-2" />
           <p>{error}</p>
         </div>
       )}
 
       {/* Users Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
@@ -323,6 +451,9 @@ const AdminUsersPage = () => {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Role
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Account Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Devices
@@ -341,84 +472,133 @@ const AdminUsersPage = () => {
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center">
+                  <td colSpan={7} className="px-6 py-4 text-center">
                     <LoadingSpinner size="lg" />
                   </td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="px-6 py-4 text-center text-gray-500 dark:text-gray-400"
                   >
                     No users found
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((user) => (
-                  <tr
-                    key={user._id}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center font-bold">
-                          {user.firstName[0]}
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">
-                            {user.firstName} {user.surName}
+                filteredUsers.map((user) => {
+                  const isDeactivated = user.Deactivated === true;
+                  return (
+                    <tr
+                      key={user._id}
+                      className={`hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                        isDeactivated ? "opacity-75" : ""
+                      }`}
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          {user.imageurl ? (
+                            <img
+                              src={user.imageurl}
+                              alt={`${user.firstName} ${user.surName}`}
+                              className={`h-10 w-10 rounded-full object-cover ${
+                                isDeactivated ? "grayscale" : ""
+                              }`}
+                            />
+                          ) : (
+                            <div
+                              className={`h-10 w-10 rounded-full flex items-center justify-center font-bold text-white ${
+                                isDeactivated ? "bg-gray-400" : "bg-primary"
+                              }`}
+                            >
+                              {user.firstName[0]}
+                            </div>
+                          )}
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-secondary dark:text-white">
+                              {user.firstName} {user.surName}
+                            </div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                              @{user.username} • {user.email}
+                            </div>
                           </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {user.email}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            user.role === "admin"
+                              ? "bg-primary bg-opacity-10 text-primary"
+                              : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                          }`}
+                        >
+                          {user.role === "admin" && (
+                            <Shield className="h-3 w-3 mr-1" />
+                          )}
+                          {user.role || "user"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {getUserStatusBadge(user)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {user.devicesCount}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            user.subscriptionStatus === "Active"
+                              ? "bg-success bg-opacity-10 text-success"
+                              : "bg-warning bg-opacity-10 text-warning"
+                          }`}
+                        >
+                          {user.subscriptionStatus}
+                        </span>
+                        {user.subActiveTill && (
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Until {formatDate(user.subActiveTill)}
                           </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {formatDate(user.createdAt)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleEditUser(user)}
+                            className="text-primary hover:text-primary-dark transition-colors p-2 hover:bg-primary hover:bg-opacity-10 rounded-lg"
+                            title="View Details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+
+                          {!isDeactivated ? (
+                            <button
+                              onClick={() =>
+                                handleStatusChange(user, "deactivate")
+                              }
+                              className="text-error hover:text-error-dark transition-colors p-2 hover:bg-error hover:bg-opacity-10 rounded-lg"
+                              title="Deactivate User"
+                            >
+                              <UserX className="h-4 w-4" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() =>
+                                handleStatusChange(user, "activate")
+                              }
+                              className="text-success hover:text-success-dark transition-colors p-2 hover:bg-success hover:bg-opacity-10 rounded-lg"
+                              title="Activate User"
+                            >
+                              <UserCheck className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          user.role === "admin"
-                            ? "bg-primary bg-opacity-10 text-primary"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {user.devicesCount}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          user.subscriptionStatus === "Active"
-                            ? "bg-success bg-opacity-10 text-success"
-                            : "bg-warning bg-opacity-10 text-warning"
-                        }`}
-                      >
-                        {user.subscriptionStatus}
-                      </span>
-                      {user.subActiveTill && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          Until{" "}
-                          {format(new Date(user.subActiveTill), "MMM d, yyyy")}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {format(new Date(user.createdAt), "MMM d, yyyy")}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => handleEditUser(user)}
-                        className="text-primary hover:text-primary-dark transition-colors"
-                      >
-                        <Edit className="h-5 w-5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -433,7 +613,7 @@ const AdminUsersPage = () => {
                   setPagination((prev) => ({ ...prev, page: prev.page - 1 }))
                 }
                 disabled={pagination.page === 1}
-                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                className="btn btn-secondary"
               >
                 Previous
               </button>
@@ -442,7 +622,7 @@ const AdminUsersPage = () => {
                   setPagination((prev) => ({ ...prev, page: prev.page + 1 }))
                 }
                 disabled={pagination.page === pagination.totalPages}
-                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                className="btn btn-secondary"
               >
                 Next
               </button>
@@ -475,11 +655,10 @@ const AdminUsersPage = () => {
                       }))
                     }
                     disabled={pagination.page === 1}
-                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                    className="btn btn-secondary rounded-r-none"
                   >
                     Previous
                   </button>
-                  {/* Add page numbers here if needed */}
                   <button
                     onClick={() =>
                       setPagination((prev) => ({
@@ -488,7 +667,7 @@ const AdminUsersPage = () => {
                       }))
                     }
                     disabled={pagination.page === pagination.totalPages}
-                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                    className="btn btn-secondary rounded-l-none"
                   >
                     Next
                   </button>
@@ -499,18 +678,137 @@ const AdminUsersPage = () => {
         )}
       </div>
 
+      {/* Status Change Confirmation Modal */}
+      <AnimatePresence>
+        {statusModal.isOpen && statusModal.user && statusModal.action && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-200 dark:border-gray-700"
+            >
+              <div className="p-6">
+                <div className="flex items-center mb-4">
+                  <div
+                    className={`p-3 rounded-full mr-4 ${
+                      statusModal.action === "activate"
+                        ? "bg-success bg-opacity-10"
+                        : "bg-error bg-opacity-10"
+                    }`}
+                  >
+                    {statusModal.action === "activate" ? (
+                      <UserCheck className={`h-6 w-6 text-success`} />
+                    ) : (
+                      <UserX className={`h-6 w-6 text-error`} />
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-secondary dark:text-white">
+                      {statusModal.action === "activate"
+                        ? "Activate"
+                        : "Deactivate"}{" "}
+                      User
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      This action will {statusModal.action} the user account
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
+                  <div className="flex items-center">
+                    <div className="h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center font-bold mr-3">
+                      {statusModal.user.firstName[0]}
+                    </div>
+                    <div>
+                      <p className="font-medium text-secondary dark:text-white">
+                        {statusModal.user.firstName} {statusModal.user.surName}
+                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        @{statusModal.user.username} • {statusModal.user.email}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  className={`p-4 rounded-lg mb-6 ${
+                    statusModal.action === "activate"
+                      ? "bg-success bg-opacity-10 border border-success border-opacity-20"
+                      : "bg-error bg-opacity-10 border border-error border-opacity-20"
+                  }`}
+                >
+                  <p
+                    className={`text-sm ${
+                      statusModal.action === "activate"
+                        ? "text-success"
+                        : "text-error"
+                    }`}
+                  >
+                    {statusModal.action === "activate"
+                      ? "The user will be able to log in and access their account again."
+                      : "The user will be unable to log in or access their account until reactivated."}
+                  </p>
+                </div>
+
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() =>
+                      setStatusModal({
+                        isOpen: false,
+                        user: null,
+                        action: null,
+                      })
+                    }
+                    className="btn btn-secondary"
+                    disabled={isChangingStatus}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmStatusChange}
+                    className={`btn ${
+                      statusModal.action === "activate"
+                        ? "bg-success text-white hover:bg-success-dark"
+                        : "bg-error text-white hover:bg-error-dark"
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    disabled={isChangingStatus}
+                  >
+                    {isChangingStatus ? (
+                      <>
+                        <Loader className="h-4 w-4 mr-2 animate-spin" />
+                        {statusModal.action === "activate"
+                          ? "Activating..."
+                          : "Deactivating..."}
+                      </>
+                    ) : (
+                      `${
+                        statusModal.action === "activate"
+                          ? "Activate"
+                          : "Deactivate"
+                      } User`
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Create Admin Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl mx-auto"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl mx-auto border border-gray-200 dark:border-gray-700"
             style={{ maxHeight: "calc(100vh - 40px)" }}
           >
             <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
               <div>
-                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
+                <h3 className="text-lg sm:text-xl font-semibold text-secondary dark:text-white">
                   Create Admin Account
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -529,7 +827,7 @@ const AdminUsersPage = () => {
               className="overflow-y-auto p-4 sm:p-6"
               style={{ maxHeight: "calc(100vh - 140px)" }}
             >
-              <form onSubmit={handleSubmit}>
+              <div onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
                   {/* Left Column */}
                   <div>
@@ -550,11 +848,9 @@ const AdminUsersPage = () => {
                         name="username"
                         value={formData.username}
                         onChange={handleInputChange}
-                        className={`w-full px-3 py-2 border ${
-                          formErrors.username
-                            ? "border-error"
-                            : "border-gray-300 dark:border-gray-600"
-                        } rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
+                        className={`input-field ${
+                          formErrors.username ? "border-error" : ""
+                        }`}
                       />
                       {formErrors.username && (
                         <p className="mt-1 text-sm text-error">
@@ -577,11 +873,9 @@ const AdminUsersPage = () => {
                           name="firstName"
                           value={formData.firstName}
                           onChange={handleInputChange}
-                          className={`w-full px-3 py-2 border ${
-                            formErrors.firstName
-                              ? "border-error"
-                              : "border-gray-300 dark:border-gray-600"
-                          } rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
+                          className={`input-field ${
+                            formErrors.firstName ? "border-error" : ""
+                          }`}
                         />
                         {formErrors.firstName && (
                           <p className="mt-1 text-sm text-error">
@@ -603,7 +897,7 @@ const AdminUsersPage = () => {
                           name="middleName"
                           value={formData.middleName}
                           onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          className="input-field"
                         />
                       </div>
 
@@ -620,11 +914,9 @@ const AdminUsersPage = () => {
                           name="surName"
                           value={formData.surName}
                           onChange={handleInputChange}
-                          className={`w-full px-3 py-2 border ${
-                            formErrors.surName
-                              ? "border-error"
-                              : "border-gray-300 dark:border-gray-600"
-                          } rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
+                          className={`input-field ${
+                            formErrors.surName ? "border-error" : ""
+                          }`}
                         />
                         {formErrors.surName && (
                           <p className="mt-1 text-sm text-error">
@@ -647,11 +939,9 @@ const AdminUsersPage = () => {
                         name="email"
                         value={formData.email}
                         onChange={handleInputChange}
-                        className={`w-full px-3 py-2 border ${
-                          formErrors.email
-                            ? "border-error"
-                            : "border-gray-300 dark:border-gray-600"
-                        } rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
+                        className={`input-field ${
+                          formErrors.email ? "border-error" : ""
+                        }`}
                       />
                       {formErrors.email && (
                         <p className="mt-1 text-sm text-error">
@@ -673,11 +963,9 @@ const AdminUsersPage = () => {
                         name="phoneNumber"
                         value={formData.phoneNumber}
                         onChange={handleInputChange}
-                        className={`w-full px-3 py-2 border ${
-                          formErrors.phoneNumber
-                            ? "border-error"
-                            : "border-gray-300 dark:border-gray-600"
-                        } rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
+                        className={`input-field ${
+                          formErrors.phoneNumber ? "border-error" : ""
+                        }`}
                       />
                       {formErrors.phoneNumber && (
                         <p className="mt-1 text-sm text-error">
@@ -707,11 +995,9 @@ const AdminUsersPage = () => {
                           name="country"
                           value={formData.country}
                           onChange={handleInputChange}
-                          className={`w-full px-3 py-2 border ${
-                            formErrors.country
-                              ? "border-error"
-                              : "border-gray-300 dark:border-gray-600"
-                          } rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
+                          className={`input-field ${
+                            formErrors.country ? "border-error" : ""
+                          }`}
                         />
                         {formErrors.country && (
                           <p className="mt-1 text-sm text-error">
@@ -733,11 +1019,9 @@ const AdminUsersPage = () => {
                           name="stateOfOrigin"
                           value={formData.stateOfOrigin}
                           onChange={handleInputChange}
-                          className={`w-full px-3 py-2 border ${
-                            formErrors.stateOfOrigin
-                              ? "border-error"
-                              : "border-gray-300 dark:border-gray-600"
-                          } rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
+                          className={`input-field ${
+                            formErrors.stateOfOrigin ? "border-error" : ""
+                          }`}
                         />
                         {formErrors.stateOfOrigin && (
                           <p className="mt-1 text-sm text-error">
@@ -760,11 +1044,9 @@ const AdminUsersPage = () => {
                         value={formData.address}
                         onChange={handleInputChange}
                         rows={2}
-                        className={`w-full px-3 py-2 border ${
-                          formErrors.address
-                            ? "border-error"
-                            : "border-gray-300 dark:border-gray-600"
-                        } rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
+                        className={`input-field ${
+                          formErrors.address ? "border-error" : ""
+                        }`}
                       />
                       {formErrors.address && (
                         <p className="mt-1 text-sm text-error">
@@ -787,11 +1069,9 @@ const AdminUsersPage = () => {
                           name="password"
                           value={formData.password}
                           onChange={handleInputChange}
-                          className={`w-full px-3 py-2 border ${
-                            formErrors.password
-                              ? "border-error"
-                              : "border-gray-300 dark:border-gray-600"
-                          } rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
+                          className={`input-field ${
+                            formErrors.password ? "border-error" : ""
+                          }`}
                         />
                         {formErrors.password && (
                           <p className="mt-1 text-sm text-error">
@@ -813,11 +1093,9 @@ const AdminUsersPage = () => {
                           name="confirmPassword"
                           value={formData.confirmPassword}
                           onChange={handleInputChange}
-                          className={`w-full px-3 py-2 border ${
-                            formErrors.confirmPassword
-                              ? "border-error"
-                              : "border-gray-300 dark:border-gray-600"
-                          } rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
+                          className={`input-field ${
+                            formErrors.confirmPassword ? "border-error" : ""
+                          }`}
                         />
                         {formErrors.confirmPassword && (
                           <p className="mt-1 text-sm text-error">
@@ -841,11 +1119,9 @@ const AdminUsersPage = () => {
                         value={formData.keyholder}
                         onChange={handleInputChange}
                         placeholder="Enter phone number for keyholder (optional)"
-                        className={`w-full px-3 py-2 border ${
-                          formErrors.keyholder
-                            ? "border-error"
-                            : "border-gray-300 dark:border-gray-600"
-                        } rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
+                        className={`input-field ${
+                          formErrors.keyholder ? "border-error" : ""
+                        }`}
                       />
                       {formErrors.keyholder && (
                         <p className="mt-1 text-sm text-error">
@@ -856,9 +1132,6 @@ const AdminUsersPage = () => {
                         Enter a phone number if this admin will be a keyholder
                       </p>
                     </div>
-
-                    {/* Hidden role field - automatically set to admin */}
-                    <input type="hidden" name="role" value="admin" />
                   </div>
                 </div>
 
@@ -866,14 +1139,14 @@ const AdminUsersPage = () => {
                   <button
                     type="button"
                     onClick={() => setShowCreateModal(false)}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium"
+                    className="btn btn-secondary"
                   >
                     Cancel
                   </button>
                   <button
-                    type="submit"
+                    onClick={handleSubmit}
                     disabled={isSubmitting}
-                    className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition-colors flex items-center text-sm font-medium"
+                    className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? (
                       <>
@@ -885,7 +1158,7 @@ const AdminUsersPage = () => {
                     )}
                   </button>
                 </div>
-              </form>
+              </div>
             </div>
           </motion.div>
         </div>

@@ -144,5 +144,9 @@ export const adminApi = {
   getReceipt: async (id: string) => {
     const response = await apiClient.get(`/admin/getOneReceipt/${id}`);
     return response.data;
+  },
+  deactivateUser: async (id: string,status:boolean) => {
+    const response = await apiClient.patch(`/admin/${id}/deactivate`,{status});
+    return response.data;
   }
 };

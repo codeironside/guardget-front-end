@@ -20,6 +20,10 @@ export const deviceApi = {
     const response = await apiClient.get("/device");
     return response.data;
   },
+  AdminGetAll: async () => {
+    const response = await apiClient.get("/admin/getdeVices");
+    return response.data;
+  },
 
   getOne: async (id: string) => {
     const response = await apiClient.get(`/device/${id}`);
@@ -53,6 +57,27 @@ export const deviceApi = {
     );
     return response.data;
   },
+  AdminUpdateStatus: async (
+    id: string,
+    status: Device["status"],
+    location: string,
+    description: string
+  ) => {
+    console.log(
+      `device id ${JSON.stringify(
+        id
+      )} status ${status} location ${location} description ${description}`
+    );
+    const response = await apiClient.put(
+      `/admin/report-device/${id.deviceId}`,
+      {
+        status: id.reportType,
+        location: id.location,
+        description: id.description,
+      }
+    );
+    return response.data;
+  },
 
   searchDevice: async (query: string) => {
     // The query parameter should be passed as "qparams"
@@ -64,9 +89,9 @@ export const deviceApi = {
     return response.data;
   },
 
- transferOwnership: async (
-    deviceId: string, 
-    recipientEmail: string, 
+  transferOwnership: async (
+    deviceId: string,
+    recipientEmail: string,
     transferReason: string
   ): Promise<ApiResponse> => {
     try {
@@ -78,10 +103,10 @@ export const deviceApi = {
       return response.data;
     } catch (error: any) {
       console.error("Error transferring device:", error);
-      
+
       // Check for JWT/session expiration errors
       if (
-        error.response?.status === 401 || 
+        error.response?.status === 401 ||
         error.message?.includes("jwt expired") ||
         error.message?.includes("session expired") ||
         error.response?.data?.message?.includes("jwt expired") ||
@@ -89,28 +114,28 @@ export const deviceApi = {
       ) {
         // Clear token from localStorage
         localStorage.removeItem("otprefreshtoken");
-        return { 
-          status: "error", 
-          message: "Your session has expired. Please restart the process." 
+        return {
+          status: "error",
+          message: "Your session has expired. Please restart the process.",
         };
       }
-      
+
       return { status: "error", message: error.message };
     }
   },
-  
+
   resendDevicetransferOtp: async (token: string): Promise<ApiResponse> => {
     try {
-      const response = await apiClient.post('/device/transfer/resend-otp', {
-        token
+      const response = await apiClient.post("/device/transfer/resend-otp", {
+        token,
       });
       return response.data;
     } catch (error: any) {
       console.error("Error resending OTP:", error);
-      
+
       // Check for JWT/session expiration errors
       if (
-        error.response?.status === 401 || 
+        error.response?.status === 401 ||
         error.message?.includes("jwt expired") ||
         error.message?.includes("session expired") ||
         error.response?.data?.message?.includes("jwt expired") ||
@@ -118,12 +143,12 @@ export const deviceApi = {
       ) {
         // Clear token from localStorage
         localStorage.removeItem("otprefreshtoken");
-        return { 
-          status: "error", 
-          message: "Your session has expired. Please restart the process." 
+        return {
+          status: "error",
+          message: "Your session has expired. Please restart the process.",
         };
       }
-      
+
       return { status: "error", message: error.message };
     }
   },

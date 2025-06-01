@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   Home,
+  AlertTriangle,
   Users,
   Smartphone,
   CreditCard,
@@ -40,6 +41,11 @@ const AdminLayout: React.FC = () => {
       label: "Devices",
       icon: <Smartphone size={20} />,
       path: "/admin/devices",
+    },
+    {
+      label: "Report",
+      icon: <AlertTriangle size={20} />,
+      path: "/admin/report-device",
     },
     { label: "Transfers", icon: <Send size={20} />, path: "/admin/transfers" },
     {

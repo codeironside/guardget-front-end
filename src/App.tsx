@@ -45,6 +45,7 @@ import AdminSubscriptionsPage from './pages/admin/AdminSubscriptionsPage';
 import AdminReceiptsPage from './pages/admin/AdminReceiptsPage';
 import AdminProfilePage from './pages/admin/AdminProfilePage';
 import AdminTransfersPage from './pages/admin/AdminTransfersPage';
+import AdminReportDevicePage from './pages/admin/AdminReportDevicePage';
 
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
@@ -84,7 +85,10 @@ function App() {
               <Route path="my-devices" element={<MyDevicesPage />} />
               <Route path="register-device" element={<RegisterDevicePage />} />
               <Route path="report-device" element={<ReportDevicePage />} />
-              <Route path="transfer-ownership" element={<TransferOwnershipPage />} />
+              <Route
+                path="transfer-ownership"
+                element={<TransferOwnershipPage />}
+              />
               <Route path="device-status" element={<DeviceStatusPage />} />
               <Route path="subscriptions" element={<SubscriptionsPage />} />
               <Route path="paymentsuccess" element={<PaymentSuccessPage />} />
@@ -102,12 +106,19 @@ function App() {
                 </ProtectedRoute>
               }
             >
-              <Route index element={<Navigate to="/admin/dashboard" replace />} />
+              <Route
+                index
+                element={<Navigate to="/admin/dashboard" replace />}
+              />
               <Route path="dashboard" element={<AdminDashboardPage />} />
               <Route path="users" element={<AdminUsersPage />} />
               <Route path="devices" element={<AdminDevicesPage />} />
+              <Route path="report-device" element={<AdminReportDevicePage />} />
               <Route path="transfers" element={<AdminTransfersPage />} />
-              <Route path="subscriptions" element={<AdminSubscriptionsPage />} />
+              <Route
+                path="subscriptions"
+                element={<AdminSubscriptionsPage />}
+              />
               <Route path="receipts" element={<AdminReceiptsPage />} />
               <Route path="profile" element={<AdminProfilePage />} />
             </Route>
@@ -118,19 +129,19 @@ function App() {
             toastOptions={{
               duration: 4000,
               style: {
-                background: '#363636',
-                color: '#fff',
+                background: "#363636",
+                color: "#fff",
               },
               success: {
                 duration: 3000,
                 theme: {
-                  primary: '#4aed88',
+                  primary: "#4aed88",
                 },
               },
               error: {
                 duration: 4000,
                 theme: {
-                  primary: '#ff4b4b',
+                  primary: "#ff4b4b",
                 },
               },
             }}
