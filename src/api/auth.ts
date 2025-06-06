@@ -14,7 +14,7 @@ export interface RegisterData {
   surName: string;
   role: string;
   country: string;
-  stateOfOrigin: string;
+  stateOfResidence: string;
   phoneNumber: string;
   address: string;
   email: string;
@@ -84,7 +84,7 @@ export const authApi = {
       middleName: data.middleName.toUpperCase(),
       surName: data.surName.toUpperCase(),
       country: data.country.toUpperCase(),
-      stateOfOrigin: data.stateOfOrigin.toUpperCase(),
+      stateOfOrigin: data.stateOfResidence.toUpperCase(),
     };
     const response = await apiClient.post("/users/create", formattedData);
     return response.data;
